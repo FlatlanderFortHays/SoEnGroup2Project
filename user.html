@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Park Now — User Portal</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">🅿️ Park Now</a>
+    <div id="whoami" class="whoami hidden">
+      <span id="whoami-name"></span>
+      <button id="logout" class="btn-link">Log out</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Login -->
+    <section id="login" class="card">
+      <h2>🚗 User Login</h2>
+      <p class="hint">Enter a username to continue — no password needed.</p>
+      <form id="login-form" class="row">
+        <input id="login-username" placeholder="Your username" autocomplete="off" />
+        <button class="btn" type="submit">Continue</button>
+      </form>
+      <p id="login-error" class="error"></p>
+    </section>
+
+    <!-- App -->
+    <section id="app" class="hidden">
+      <div class="card">
+        <h2>My cars</h2>
+        <form id="car-form" class="grid-2">
+          <input id="car-make"  placeholder="Make (e.g. Toyota)"  autocomplete="off" />
+          <input id="car-model" placeholder="Model (e.g. Corolla)" autocomplete="off" />
+          <input id="car-color" placeholder="Color (e.g. Blue)"    autocomplete="off" />
+          <input id="car-plate" placeholder="License plate"        autocomplete="off" />
+          <button class="btn" type="submit">Add car</button>
+        </form>
+        <p id="car-msg" class="msg error"></p>
+        <ul id="car-list" class="list"></ul>
+      </div>
+
+      <div class="card">
+        <h2>Park now</h2>
+        <div class="row">
+          <label>Car
+            <select id="park-car"></select>
+          </label>
+          <label>Hours
+            <input id="park-hours" type="number" min="0.1" step="0.1" value="2" />
+          </label>
+        </div>
+        <p id="park-msg" class="msg"></p>
+        <ul id="garage-list" class="list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/user.js"></script>
+</body>
+</html>

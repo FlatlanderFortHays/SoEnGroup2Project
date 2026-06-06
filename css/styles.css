@@ -1,0 +1,162 @@
+/* =====================================================================
+   Park Now — shared styles. Plain CSS, no build step.
+   ===================================================================== */
+
+:root {
+  --bg: #0f172a;
+  --bg-soft: #1e293b;
+  --card: #ffffff;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --brand: #2563eb;
+  --brand-dark: #1d4ed8;
+  --ok: #16a34a;
+  --ok-bg: #dcfce7;
+  --err: #dc2626;
+  --err-bg: #fee2e2;
+  --full: #b45309;
+  --full-bg: #fef3c7;
+  --radius: 14px;
+  --shadow: 0 10px 30px rgba(2, 6, 23, 0.12);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+  background: linear-gradient(160deg, #f1f5f9 0%, #e2e8f0 100%);
+  min-height: 100vh;
+}
+
+.container { max-width: 920px; margin: 0 auto; padding: 24px; }
+.hidden { display: none !important; }
+.muted { color: var(--muted); }
+.mono { font-family: ui-monospace, "Cascadia Code", Menlo, Consolas, monospace; }
+.grow { flex: 1; }
+
+/* ---------- Landing page ---------- */
+.hero { text-align: center; padding-top: 64px; }
+.logo { font-size: 3rem; margin: 0; }
+.tagline { color: var(--muted); font-size: 1.15rem; margin: 8px 0 40px; }
+
+.portal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 20px;
+}
+.portal-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 20px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-decoration: none;
+  color: var(--ink);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.portal-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(2, 6, 23, 0.18); }
+.portal-icon { font-size: 2.6rem; }
+.portal-title { font-weight: 700; font-size: 1.2rem; }
+.portal-desc { color: var(--muted); text-align: center; font-size: 0.95rem; }
+.footnote { margin-top: 48px; color: var(--muted); font-size: 0.85rem; }
+
+/* ---------- Top bar (portal pages) ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: var(--bg);
+  color: #fff;
+}
+.brand { color: #fff; text-decoration: none; font-weight: 700; font-size: 1.1rem; }
+.whoami { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; }
+.btn-link {
+  background: none; border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #fff; padding: 4px 10px; border-radius: 8px; cursor: pointer;
+}
+.btn-link:hover { background: rgba(255, 255, 255, 0.12); }
+
+/* ---------- Cards & layout ---------- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 22px;
+  margin-bottom: 22px;
+}
+.card h2 { margin-top: 0; }
+.hint { color: var(--muted); margin-top: -6px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.row > label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+
+/* ---------- Forms ---------- */
+input, select {
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  min-width: 0;
+}
+input:focus, select:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
+
+.btn {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--brand);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.btn:hover { background: var(--brand-dark); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-ghost { background: #eef2ff; color: var(--brand-dark); }
+.btn-ghost:hover { background: #e0e7ff; }
+
+/* ---------- Lists ---------- */
+ul.list { list-style: none; padding: 0; margin: 12px 0 0; }
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.list-row:last-child { border-bottom: none; }
+
+.badge {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--ok-bg);
+  color: var(--ok);
+  white-space: nowrap;
+}
+.badge-full { background: var(--full-bg); color: var(--full); }
+
+/* ---------- Messages ---------- */
+.msg { margin: 12px 0 0; font-weight: 600; min-height: 1.2em; }
+.msg.success { color: var(--ok); }
+.msg.error, .error { color: var(--err); }
+
+/* ---------- Table (tow portal) ---------- */
+table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }

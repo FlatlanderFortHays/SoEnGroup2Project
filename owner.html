@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Park Now — Owner Portal</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">🅿️ Park Now</a>
+    <div id="whoami" class="whoami hidden">
+      <span id="whoami-name"></span>
+      <button id="logout" class="btn-link">Log out</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Login -->
+    <section id="login" class="card">
+      <h2>🏢 Owner Login</h2>
+      <p class="hint">Enter a username to continue — no password needed.</p>
+      <form id="login-form" class="row">
+        <input id="login-username" placeholder="Your username" autocomplete="off" />
+        <button class="btn" type="submit">Continue</button>
+      </form>
+      <p id="login-error" class="error"></p>
+    </section>
+
+    <!-- App -->
+    <section id="app" class="hidden">
+      <div class="card">
+        <h2>Add a parking garage</h2>
+        <form id="garage-form" class="row">
+          <label>Name
+            <input id="garage-name" placeholder="e.g. Main Street Garage" autocomplete="off" />
+          </label>
+          <label>Total spots
+            <input id="garage-spots" type="number" min="1" step="1" value="10" />
+          </label>
+          <button class="btn" type="submit">Add garage</button>
+        </form>
+        <p id="garage-msg" class="msg error"></p>
+      </div>
+
+      <div class="card">
+        <h2>Your garages</h2>
+        <ul id="garage-list" class="list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/owner.js"></script>
+</body>
+</html>

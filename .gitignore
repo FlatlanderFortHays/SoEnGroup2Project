@@ -1,0 +1,6 @@
+# OS / editor cruft — nothing in this project needs a build or node_modules.
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+*.log
