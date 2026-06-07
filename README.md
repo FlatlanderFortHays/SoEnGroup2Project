@@ -27,7 +27,7 @@ Your browser  ──supabase-js──►  Supabase (PostgreSQL + auto API)
 
 ## 🧑‍💻 Working on it (everyone)
 
-> 🧑‍🎓 **Brand-new teammate?** Read **[start_here.md](start_here.md)** first — it walks you through getting the project into VS Code on your own branch, setting up your own test database, and running the site locally. Then pick a task from **[FEATURE_IDEAS.md](FEATURE_IDEAS.md)** (good first tasks + what *not* to touch).
+> 🧑‍🎓 **Brand-new teammate?** Read **[start_here.md](start_here.md)** first — it walks you through getting the project into VS Code on your own branch, setting up your own test database, and running the site locally.
 
 You **do not need Node, npm, or a database installed.** To run it locally:
 
@@ -60,5 +60,4 @@ js/config.js              Supabase URL + anon key (PUBLIC, already set — don't
 js/supabaseClient.js      Shared client + username login helper
 supabase/schema.sql       The database (run once in Supabase SQL Editor)
 start_here.md             New-teammate setup — read this first
-FEATURE_IDEAS.md          Good first tasks + "don't touch" list
 ```

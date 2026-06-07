@@ -7,8 +7,8 @@ own changes safely" in three parts:
 2. [Set up your own Supabase database for testing](#2-set-up-your-own-database-for-testing)
 3. [View the website locally](#3-view-the-website-locally)
 
-Take it slow — you only do this setup once. When you're done, pick something to work on from
-[FEATURE_IDEAS.md](FEATURE_IDEAS.md).
+Take it slow — you only do this setup once. When you're done, you're ready to start building — check
+with the team on what to work on.
 
 ---
 
@@ -130,4 +130,4 @@ just won't get auto-reload, so you'll refresh manually after each change.
 - Your own database for safe testing ✔
 - The site running locally ✔
 
-**Next:** pick something from **[FEATURE_IDEAS.md](FEATURE_IDEAS.md)** and start building. Welcome aboard! 🚗
+**Next:** ask the team what to build, and start coding. Welcome aboard! 🚗
