@@ -1,23 +1,38 @@
 // ---------------------------------------------------------------------
-//  Supabase project credentials.
+//  Supabase credentials  (PUBLIC by design — safe to commit).
 //
-//  These two values are PUBLIC by design for a static site — they are safe
-//  to commit to GitHub. (Access is controlled by Row Level Security in the
-//  database, not by hiding these.)
+//  The two values below are the SHARED team (production) database. They are
+//  public on purpose for a static site; access is controlled by the database's
+//  Row Level Security, not by hiding these.
 //
-//  Where to find them:
-//    Supabase Dashboard → Project Settings → API
-//      • Project URL          -> SUPABASE_URL
-//      • Project API keys: anon / public  -> SUPABASE_ANON_KEY
+//  ⚠️  TEAMMATES: do NOT edit the two PROD_ lines below. This is the shared
+//      database — changing them repoints the live site at a different (empty)
+//      database and breaks the app for everyone.
 //
-//  Paste your real values below, then commit + push. Cloudflare redeploys
-//  automatically and the whole team is pointed at the same database.
-//
-//  ⚠️  TEAMMATES: once these are filled in, DON'T change them. This is the
-//      SHARED team database. Editing or "rotating" these keys points your
-//      copy at a different (empty) database and breaks the app for everyone.
-//      If the two values below are already filled in, you're done here.
+//  ✅  Working on a feature that changes the database? Test against your OWN
+//      free Supabase project instead — WITHOUT touching this file. In your
+//      browser console (press F12 → Console) run this once:
+//        localStorage.setItem("PARKNOW_DEV_URL", "https://YOUR-dev-ref.supabase.co")
+//        localStorage.setItem("PARKNOW_DEV_KEY", "sb_publishable_YOUR_dev_key")
+//        location.reload()
+//      To switch back to the shared database:
+//        localStorage.removeItem("PARKNOW_DEV_URL"); localStorage.removeItem("PARKNOW_DEV_KEY"); location.reload()
+//      Full walkthrough: see start_here.md.
 // ---------------------------------------------------------------------
 
-window.SUPABASE_URL = "https://ymxokfqiuncxlubwdabb.supabase.co";
-window.SUPABASE_ANON_KEY = "sb_publishable_Qg593P_4xXgWClUwwLnceg_T74KIu_Y";
+(function () {
+  // Shared (production) database — do not edit these two lines.
+  const PROD_URL = "https://ymxokfqiuncxlubwdabb.supabase.co";
+  const PROD_KEY = "sb_publishable_Qg593P_4xXgWClUwwLnceg_T74KIu_Y";
+
+  // Optional personal dev-database override (per browser, never committed).
+  const devUrl = localStorage.getItem("PARKNOW_DEV_URL");
+  const devKey = localStorage.getItem("PARKNOW_DEV_KEY");
+
+  window.SUPABASE_URL = devUrl || PROD_URL;
+  window.SUPABASE_ANON_KEY = devKey || PROD_KEY;
+
+  if (devUrl) {
+    console.warn("⚠️ Park Now is using YOUR personal dev database, not the shared team one.");
+  }
+})();

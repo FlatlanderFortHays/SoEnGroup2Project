@@ -1,12 +1,12 @@
 # Park Now — Feature Ideas
 
 Pick something here for your next contribution. If you start one, **open a GitHub issue** saying
-"I'm taking X" so two people don't build the same thing. See **[CONTRIBUTING.md](CONTRIBUTING.md)** for
-*how* to add a feature, step by step.
+"I'm taking X" so two people don't build the same thing. New here? See **[start_here.md](start_here.md)**
+to get set up.
 
 ## 🟢 Good first features (small, self-contained)
 
-- Add a **phone number** or **email** field to a user's cars. *(Full walkthrough in CONTRIBUTING.md.)*
+- Add a **phone number** or **email** field to a user's cars.
 - Add a **vehicle type** dropdown (Sedan / SUV / Truck / Motorcycle) to cars.
 - Show the **owner's name** next to each garage in the User and Tow portals.
 - Add an **address / location** text field to garages.
