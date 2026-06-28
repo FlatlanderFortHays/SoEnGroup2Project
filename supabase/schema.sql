@@ -18,13 +18,28 @@ create table if not exists accounts (
 );
 
 -- A parking garage created by an owner.
+--   Layout: `floors` levels, each with `rows` aisles (lettered A, B, C…) of
+--   `slots_per_row` spots. total_spots is kept as the canonical count
+--   (= floors * rows * slots_per_row) so the spot-assignment functions and views
+--   below stay unchanged; the floor/row/letter/side layout is derived from these
+--   dimensions in the UI (spot label e.g. A203 = row A, floor 2, spot 03).
+--   Older rows may have NULL floors/rows/slots_per_row — the simulation falls
+--   back to a flat grid (and a single floor) for those.
 create table if not exists garages (
-  id          bigint generated always as identity primary key,
-  owner_id    bigint not null references accounts(id) on delete cascade,
-  name        text not null,
-  total_spots integer not null check (total_spots > 0),
-  created_at  timestamptz not null default now()
+  id            bigint generated always as identity primary key,
+  owner_id      bigint not null references accounts(id) on delete cascade,
+  name          text not null,
+  total_spots   integer not null check (total_spots > 0),
+  floors        integer check (floors is null or floors > 0),
+  rows          integer check (rows is null or rows > 0),
+  slots_per_row integer check (slots_per_row is null or slots_per_row > 0),
+  created_at    timestamptz not null default now()
 );
+
+-- Upgrade databases created before these layout columns existed (safe to re-run).
+alter table garages add column if not exists floors        integer;
+alter table garages add column if not exists rows          integer;
+alter table garages add column if not exists slots_per_row integer;
 
 -- A car registered by a user.
 create table if not exists cars (
@@ -63,12 +78,20 @@ on conflict (username, role) do nothing;
 -- ---------------------------------------------------------------------
 
 -- Live open/occupied counts per garage.
+-- Dropped first: "create or replace view" can only APPEND columns, so it errors
+-- if a new column (e.g. floors) is inserted mid-list. Dropping lets us define the
+-- column order freely on every re-run. (Nothing depends on these views; the
+-- grants at the bottom re-apply afterwards.)
+drop view if exists garage_availability;
 create or replace view garage_availability as
 select
   g.id,
   g.name,
   g.owner_id,
   g.total_spots,
+  g.floors,
+  g.rows,
+  g.slots_per_row,
   count(r.id) filter (where r.parked_until > now())                  as occupied,
   g.total_spots - count(r.id) filter (where r.parked_until > now())  as open_spots
 from garages g
@@ -76,6 +99,7 @@ left join reservations r on r.garage_id = g.id
 group by g.id;
 
 -- Every car currently (legally) parked — powers the Tow Company portal.
+drop view if exists currently_parked;
 create or replace view currently_parked as
 select
   r.id,

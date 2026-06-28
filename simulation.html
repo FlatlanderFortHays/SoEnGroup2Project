@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Park Now — Garage Simulation</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">🅿️ Park Now</a>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <h2>🗺️ Garage Simulation</h2>
+      <p class="hint">A live map of a garage's spots. No login needed — just pick a garage.</p>
+
+      <div class="row">
+        <label>Garage
+          <select id="sim-garage"></select>
+        </label>
+        <button id="sim-refresh" class="btn btn-ghost" type="button">Refresh</button>
+        <label class="check">
+          <input id="sim-auto" type="checkbox" /> Auto-refresh
+        </label>
+      </div>
+
+      <div class="row" style="margin-top: 12px;">
+        <label>Park for (hours)
+          <input id="sim-hours" type="number" min="0.25" step="0.25" value="2" />
+        </label>
+        <button id="sim-fill" class="btn" type="button" title="Demo: fill every open spot">Simulate fill</button>
+        <button id="sim-clear" class="btn btn-ghost" type="button" title="Demo: remove only simulated cars">Clear simulated</button>
+      </div>
+
+      <p id="sim-summary" class="lot-summary muted"></p>
+
+      <div class="legend">
+        <span class="legend-item"><span class="legend-swatch available"></span> Available</span>
+        <span class="legend-item"><span class="legend-swatch occupied"></span> Occupied</span>
+        <span class="legend-item">🧪 Simulated car</span>
+      </div>
+
+      <div class="row" style="margin-top: 8px;">
+        <label class="check">Zoom
+          <input id="sim-zoom" type="range" min="0.4" max="1.5" step="0.1" value="1" />
+        </label>
+      </div>
+      <div id="sim-viewport" class="map-viewport">
+        <div id="sim-grid" class="lot-grid"></div>
+      </div>
+      <p id="sim-msg" class="msg"></p>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/garageMap.js"></script>
+  <script src="js/simulation.js"></script>
+</body>
+</html>
