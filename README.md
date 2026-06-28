@@ -5,8 +5,9 @@ A simple parking-garage web app with three portals:
 | Portal | What it does |
 | --- | --- |
 | 🚗 **User** | Register your car, browse garages, and reserve a spot for X hours. |
-| 🏢 **Owner** | Add a garage (name + number of spots) and watch occupancy. |
+| 🏢 **Owner** | Add a garage (name + floors × rows × slots-per-row), watch occupancy, and view a live map of any garage. |
 | 🚛 **Tow Company** | See every car currently *legally* parked in a garage. |
+| 🗺️ **Garage Simulation** | A public, login-free live map of a garage's spots (filled vs open), with a "Simulate fill" button. |
 
 **Stack:** plain HTML/CSS/JS (no build step) + [Supabase](https://supabase.com) (hosted PostgreSQL) + Cloudflare Pages (auto-deploys from GitHub). **There is no backend server to run** — the site talks to the database through the Supabase client.
 
@@ -55,6 +56,7 @@ index.html              Landing page (pick a portal)
 user.html  / js/user.js   User portal:  cars, park-now, "Simulate full lot"
 owner.html / js/owner.js  Owner portal: add garages, see occupancy
 tow.html   / js/tow.js    Tow portal:   currently-parked list
+simulation.html / js/simulation.js  Garage Simulation: live spot map (no login)
 css/styles.css            Shared styles
 js/config.js              Supabase URL + anon key (PUBLIC, already set — don't change)
 js/supabaseClient.js      Shared client + username login helper

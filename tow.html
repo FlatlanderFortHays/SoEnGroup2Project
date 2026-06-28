@@ -19,10 +19,16 @@
     <!-- Login -->
     <section id="login" class="card">
       <h2>🚛 Tow Company Login</h2>
-      <p class="hint">Enter a username to continue — no password needed.</p>
+      <p class="hint">Sign in to continue.</p>
       <form id="login-form" class="row">
-        <input id="login-username" placeholder="Your username" autocomplete="off" />
+        <label>Username
+          <input id="login-username" placeholder="Your username" autocomplete="off" />
+        </label>
+        <label>Password
+          <input id="login-password" type="password" placeholder="Your password" autocomplete="off" />
+        </label>
         <button class="btn" type="submit">Continue</button>
+        <button class="btn btn-ghost" type="button" id="create-account">Create account</button>
       </form>
       <p id="login-error" class="error"></p>
     </section>
@@ -35,6 +41,9 @@
         <div class="row">
           <label>Garage
             <select id="tow-garage"></select>
+          </label>
+          <label>License plate
+            <input id="tow-plate" placeholder="Search plate…" autocomplete="off" />
           </label>
           <button id="tow-refresh" class="btn btn-ghost" type="button">Refresh</button>
         </div>
