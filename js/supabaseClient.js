@@ -35,17 +35,38 @@ const Auth = {
 
   clear(role) { localStorage.removeItem(this.keyFor(role)); },
 
-  // Find-or-create the account for {username, role}; remember it; return it.
-  async login(username, role) {
+
+  // Create a new account. Hashing happens in Postgres
+  // plaintext password sent over HTTPS
+  async signup(username, password, role) {
     username = (username || "").trim();
     if (!username) throw new Error("Please enter a username.");
+    if (!password || password.length < 4) throw new Error("Password must be at least 4 characters.");
 
-    const { data, error } = await sb
-      .from("accounts")
-      .upsert({ username, role }, { onConflict: "username,role" })
-      .select()
-      .single();
-    if (error) throw error;
+    const { data, error } = await sb.rpc("signup", {
+      p_username: username,
+      p_password: password,
+      p_role: role,
+    });
+    if (error) throw new Error(error.message);
+
+    const session = { id, datalid, username: data.username, role: data.role };
+    this.set(role, session);
+    return session;
+  },
+
+  // Verify {username, password } against stored hash
+  async login(username, password, role) {
+    username = (username || "").trim();
+    if (!username) throw new Error("Please enter a username.");
+    if (!password) throw new Error("Please enter your password.");
+
+    const { data, error } = await sb.rpc("login", {
+      p_username: username,
+      p_password: password,
+      p_role: role,
+    });
+    if (error) throw new Error(error.message);
 
     const session = { id: data.id, username: data.username, role: data.role };
     this.set(role, session);
@@ -60,13 +81,15 @@ const Auth = {
 //   #login, #app, #whoami, #whoami-name, #logout,
 //   #login-form, #login-username, #login-error
 function initPortal(role, onReady) {
-  const loginSection = document.getElementById("login");
-  const appSection   = document.getElementById("app");
-  const whoami       = document.getElementById("whoami");
-  const whoamiName   = document.getElementById("whoami-name");
-  const form         = document.getElementById("login-form");
-  const input        = document.getElementById("login-username");
-  const errorEl      = document.getElementById("login-error");
+  const loginSection  = document.getElementById("login");
+  const appSection    = document.getElementById("app");
+  const whoami        = document.getElementById("whoami");
+  const whoamiName    = document.getElementById("whoami-name");
+  const form          = document.getElementById("login-form");
+  const input         = document.getElementById("login-username");
+  const passwordInput = document.getElementById("login-password");
+  const errorEl       = document.getElementById("login-error");
+  const createBtn     = document.getElementById("create-account");
 
   function showApp(session) {
     loginSection.classList.add("hidden");
@@ -85,11 +108,18 @@ function initPortal(role, onReady) {
     event.preventDefault();
     errorEl.textContent = "";
     try {
-      showApp(await Auth.login(input.value, role));
+      const password = passwordInput ? passwordInput.value : "";
+      showApp(await Auth.login(input.value, password, role));
     } catch (err) {
       errorEl.textContent = err.message || String(err);
     }
   });
+
+  if (createBtn) {
+    createBtn.addEventListener("click", () => {
+      location.href = `signup.html?role=${role}`;
+    });
+  }
 
   // Resume an existing session for this role, if any.
   const existing = Auth.get(role);
