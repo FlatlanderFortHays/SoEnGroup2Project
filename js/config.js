@@ -26,8 +26,8 @@
   const PROD_KEY = "sb_publishable_Qg593P_4xXgWClUwwLnceg_T74KIu_Y";
 
   // Optional personal dev-database override (per browser, never committed).
-  const devUrl = localStorage.getItem("PARKNOW_DEV_URL");
-  const devKey = localStorage.getItem("PARKNOW_DEV_KEY");
+  const devUrl = "https://wzqhrvpfxgjxrqfdzmrf.supabase.co"; // put your URL here
+  const devKey = "sb_publishable_QdtXLal_biZ0HQvTrO5ipA_mm1Y1LBL"; // put your Key here
 
   window.SUPABASE_URL = devUrl || PROD_URL;
   window.SUPABASE_ANON_KEY = devKey || PROD_KEY;
