@@ -19,10 +19,16 @@
     <!-- Login -->
     <section id="login" class="card">
       <h2>🏢 Owner Login</h2>
-      <p class="hint">Enter a username to continue — no password needed.</p>
+      <p class="hint">Sign in to continue.</p>
       <form id="login-form" class="row">
-        <input id="login-username" placeholder="Your username" autocomplete="off" />
+        <label>Username
+          <input id="login-username" placeholder="Your username" autocomplete="off" />
+        </label>
+        <label>Password
+          <input id="login-password" type="password" placeholder="Your password" autocomplete="off" />
+        </label>
         <button class="btn" type="submit">Continue</button>
+        <button class="btn btn-ghost" type="button" id="create-account">Create account</button>
       </form>
       <p id="login-error" class="error"></p>
     </section>
@@ -35,11 +41,18 @@
           <label>Name
             <input id="garage-name" placeholder="e.g. Main Street Garage" autocomplete="off" />
           </label>
-          <label>Total spots
-            <input id="garage-spots" type="number" min="1" step="1" value="10" />
+          <label>Floors
+            <input id="garage-floors" type="number" min="1" step="1" value="1" />
+          </label>
+          <label>Rows (A, B, C…)
+            <input id="garage-rows" type="number" min="1" step="1" value="4" />
+          </label>
+          <label>Slots per row
+            <input id="garage-slots" type="number" min="1" step="1" value="10" />
           </label>
           <button class="btn" type="submit">Add garage</button>
         </form>
+        <p class="hint" style="margin-top: 16px;">Each floor has the same rows; each row is an aisle (odds one side, evens the other). Spots are labelled like A203 — row A, floor 2, spot 03.</p>
         <p id="garage-msg" class="msg error"></p>
       </div>
 
@@ -47,12 +60,38 @@
         <h2>Your garages</h2>
         <ul id="garage-list" class="list"></ul>
       </div>
+
+      <!-- Read-only live map for a clicked garage -->
+      <div id="map-card" class="card hidden">
+        <div class="row" style="justify-content: space-between; align-items: center;">
+          <h2 id="map-title" style="margin: 0;">Garage map</h2>
+          <button id="map-close" class="btn-link" type="button">Close</button>
+        </div>
+        <p id="map-summary" class="lot-summary muted"></p>
+        <div class="row" style="margin-top: 4px;">
+          <button id="map-refresh" class="btn btn-ghost" type="button">Refresh</button>
+          <label class="check"><input id="map-auto" type="checkbox" /> Auto-refresh</label>
+          <label class="check">Zoom
+            <input id="map-zoom" type="range" min="0.4" max="1.5" step="0.1" value="1" />
+          </label>
+        </div>
+        <div class="legend" style="margin-top: 10px;">
+          <span class="legend-item"><span class="legend-swatch available"></span> Available</span>
+          <span class="legend-item"><span class="legend-swatch occupied"></span> Occupied</span>
+          <span class="legend-item">🧪 Simulated car</span>
+        </div>
+        <div id="map-viewport" class="map-viewport">
+          <div id="map-grid"></div>
+        </div>
+        <p id="map-msg" class="msg"></p>
+      </div>
     </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
   <script src="js/supabaseClient.js"></script>
+  <script src="js/garageMap.js"></script>
   <script src="js/owner.js"></script>
 </body>
 </html>

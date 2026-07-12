@@ -49,17 +49,43 @@
       </div>
 
       <div class="card">
-        <h2>Park now</h2>
+        <h2>Book a Parking Spot</h2>
         <div class="row">
           <label>Car
             <select id="park-car"></select>
+          </label>
+          <label>Booking type
+            <select id="booking-type">
+              <option value="" disabled selected>-- Choose an Option --</option>
+              <option value="now">Park Now</option>
+              <option value="future">Reserve Future Date</option>
+            </select>
           </label>
           <label>Hours
             <input id="park-hours" type="number" min="0.1" step="0.1" value="2" />
           </label>
         </div>
+
+        <!-- Future Date Picker (Reveals when 'Reserve Future Date' is chosen) -->
+        <div id="future-date-container" class="row hidden" style="margin-top: 1rem;">
+          <label style="width: 100%;">Arrival Date & Time
+            <input id="park-start-time" type="datetime-local" style="width: 100%; margin-top: 0.25rem;" />
+          </label>
+        </div>
+
+        <!-- Calculated Timeline Banner positioned cleanly below all input choices -->
+        <div id="reservation-summary" class="mono" style="margin-top: 1rem; padding: 0.5rem; background: #f5f5f5; border-left: 4px solid #0066cc; font-size: 0.9rem;">
+          Calculated Window: <span id="calc-start" style="font-weight:600;">--</span> to <span id="calc-end" style="font-weight:600; color: #cc0000;">--</span>
+        </div>
+
         <p id="park-msg" class="msg"></p>
         <ul id="garage-list" class="list"></ul>
+      </div>
+
+      <div class="card" style="margin-top: 2rem;">
+        <h2>📋 My Reservations</h2>
+        <p id="manage-msg" class="msg"></p>
+        <ul id="my-reservations-list" class="list"></ul>
       </div>
     </section>
   </main>
