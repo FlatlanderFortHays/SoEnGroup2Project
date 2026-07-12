@@ -7,36 +7,36 @@
     const ROLE_PAGES = { user: "user.html", owner: "owner.html", tow: "tow.html" };
 
     const params    = new URLSearchParams(location.search);
-    const roleE1    = document.getElementById("signup-role");
-    const userE1    = document.getElementById("signup-username");
-    const passE1    = document.getElementById("signup-password");
-    const confirmE1 = document.getElementById("signup-confirm");
-    const errorE1   = document.getElementById("signup-error");
+    const roleEl    = document.getElementById("signup-role");
+    const userEl    = document.getElementById("signup-username");
+    const passEl    = document.getElementById("signup-password");
+    const confirmEl = document.getElementById("signup-confirm");
+    const errorEl   = document.getElementById("signup-error");
     const backLink  = document.getElementById("back-to-login");
     const form      = document.getElementById("signup-form");
 
     const requested = params.get("role");
-    roleE1.value = ROLE_PAGES[requested] ? requested : "user";
-    backLink.href = ROLE_PAGES[roleE1.value];
+    roleEl.value = ROLE_PAGES[requested] ? requested : "user";
+    backLink.href = ROLE_PAGES[roleEl.value];
 
-    roleE1.addEventListener("change", () => {
-        backLink.href = ROLE_PAGES[roleE1.value];
+    roleEl.addEventListener("change", () => {
+        backLink.href = ROLE_PAGES[roleEl.value];
     });
 
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
-        errorE1.textContent = "";
+        errorEl.textContent = "";
 
-        if (passE1.value !== confirmE1.value) {
-            errorE1.textContent = "Passwords don't match.";
+        if (passEl.value !== confirmEl.value) {
+            errorEl.textContent = "Passwords don't match.";
         return;
         }
 
         try {
-            await Auth.signup(userE1.value, passE1.value, roleE1.value);
-            location.href = ROLE_PAGES[roleE1.value];
+            await Auth.signup(userEl.value, passEl.value, roleEl.value);
+            location.href = ROLE_PAGES[roleEl.value];
         } catch (err) {
-            errorE1.textContent = err.message || String(err);
+            errorEl.textContent = err.message || String(err);
         }
     });
 })();
