@@ -576,7 +576,7 @@ grant all on garages, cars, reservations to anon, authenticated;
 grant usage, select on all sequences in schema public to anon, authenticated;
 grant select on garage_availability, currently_parked to anon, authenticated;
 grant execute on function signup(text, text, text) to anon, authenticated;
-grant execute on function logged(text, text, text) to anon, authenticated;
+grant execute on function login(text, text, text) to anon, authenticated;
 grant execute on function park_car(bigint, bigint, numeric)        to anon, authenticated;
 grant execute on function simulate_fill(bigint, integer, numeric)  to anon, authenticated;
 grant execute on function reserve_car(bigint, bigint, timestamptz, numeric) to anon, authenticated;
