@@ -42,6 +42,12 @@
           <input id="car-model" placeholder="Model (e.g. Corolla)" autocomplete="off" />
           <input id="car-color" placeholder="Color (e.g. Blue)"    autocomplete="off" />
           <input id="car-plate" placeholder="License plate"        autocomplete="off" />
+          <select id="car-size" title="Vehicle size">
+            <option value="compact">Compact</option>
+            <option value="normal" selected>Normal</option>
+            <option value="large">Large</option>
+          </select>
+          <label class="check"><input id="car-ev" type="checkbox" /> Electric (EV)</label>
           <button class="btn" type="submit">Add car</button>
         </form>
         <p id="car-msg" class="msg error"></p>

@@ -9,14 +9,15 @@ initPortal("owner", (session) => {
   const msgEl    = document.getElementById("garage-msg");
 
   // Read-only map panel
-  const mapCard    = document.getElementById("map-card");
-  const mapTitle   = document.getElementById("map-title");
-  const mapSummary = document.getElementById("map-summary");
-  const mapGrid    = document.getElementById("map-grid");
-  const mapMsg     = document.getElementById("map-msg");
-  const mapAuto    = document.getElementById("map-auto");
-  const mapZoom    = document.getElementById("map-zoom");
+  const mapCard     = document.getElementById("map-card");
+  const mapTitle    = document.getElementById("map-title");
+  const mapSummary  = document.getElementById("map-summary");
+  const mapViewport = document.getElementById("map-viewport");
+  const mapMsg      = document.getElementById("map-msg");
+  const mapAuto     = document.getElementById("map-auto");
+  const mapZoom     = document.getElementById("map-zoom");
 
+  let map          = null;       // canvas controller — lazily mounted on first open
   let garagesById  = new Map();  // id -> garage_availability row (instant title/summary on open)
   let mapGarageId  = null;
   let mapAutoTimer = null;
@@ -61,9 +62,9 @@ initPortal("owner", (session) => {
     const myGen = ++mapGen;
     try {
       const { garage, bySpot } = await GarageMap.load(mapGarageId);
-      if (myGen !== mapGen) return;  // a newer render started — drop this result
+      if (myGen !== mapGen || !map) return;  // a newer render started (or panel closed)
       mapSummary.textContent = `${garage.occupied} / ${garage.total_spots} occupied`;
-      const drew = GarageMap.render(mapGrid, garage, bySpot);
+      const drew = map.setData(garage, bySpot);
       if (!drew && mapAuto.checked) { mapAuto.checked = false; syncMapAuto(); }
       mapMsg.textContent = "";
       mapMsg.className = "msg";
@@ -94,8 +95,10 @@ initPortal("owner", (session) => {
     mapSummary.textContent = cached ? `${cached.occupied} / ${cached.total_spots} occupied` : "";
     mapMsg.textContent = "";
     mapMsg.className = "msg";
-    mapGrid.innerHTML = "";
-    mapCard.classList.remove("hidden");
+    mapCard.classList.remove("hidden");   // unhide FIRST so the canvas can size (clientWidth > 0)
+    if (!map) {
+      map = GarageMap.mount(mapViewport, { onZoomChange: (z) => { mapZoom.value = z; } });
+    }
     mapCard.scrollIntoView({ behavior: "smooth", block: "start" });
     renderMap();
     syncMapAuto();
@@ -105,7 +108,7 @@ initPortal("owner", (session) => {
     if (mapAutoTimer) { clearInterval(mapAutoTimer); mapAutoTimer = null; }
     mapGen++;            // invalidate any in-flight renderMap so it can't paint the closed panel
     mapGarageId = null;
-    mapGrid.innerHTML = "";
+    if (map) map.clear();
     mapCard.classList.add("hidden");
   }
 
@@ -117,7 +120,7 @@ initPortal("owner", (session) => {
   document.getElementById("map-refresh").addEventListener("click", renderMap);
   document.getElementById("map-close").addEventListener("click", closeMap);
   mapAuto.addEventListener("change", syncMapAuto);
-  mapZoom.addEventListener("input", () => mapGrid.style.setProperty("--map-zoom", mapZoom.value));
+  mapZoom.addEventListener("input", () => { if (map) map.setZoom(mapZoom.value); });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

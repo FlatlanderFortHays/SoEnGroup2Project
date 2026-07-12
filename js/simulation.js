@@ -6,7 +6,6 @@
 // portal) so both views render identically.
 (function () {
   const select    = document.getElementById("sim-garage");
-  const grid      = document.getElementById("sim-grid");
   const summaryEl = document.getElementById("sim-summary");
   const msgEl     = document.getElementById("sim-msg");
   const hoursEl   = document.getElementById("sim-hours");
@@ -14,6 +13,11 @@
   const zoomEl    = document.getElementById("sim-zoom");
   const fillBtn   = document.getElementById("sim-fill");
   const clearBtn  = document.getElementById("sim-clear");
+
+  // The canvas map controller (renders the lot, owns pan/zoom/tooltip/floors).
+  const map = GarageMap.mount(document.getElementById("sim-viewport"), {
+    onZoomChange: (z) => { zoomEl.value = z; },
+  });
 
   let autoTimer = null;
   let gen = 0;  // race guard: a slow fetch is dropped if a newer render started
@@ -43,19 +47,19 @@
   async function render() {
     const myGen = ++gen;  // bump first so any prior in-flight fetch is invalidated
     const garageId = select.value;
-    if (!garageId) { grid.innerHTML = ""; summaryEl.textContent = ""; return; }
+    if (!garageId) { map.clear(); summaryEl.textContent = ""; return; }
 
     try {
       const { garage, bySpot } = await GarageMap.load(garageId);
       if (myGen !== gen) return;  // a newer render started — drop this result
       summaryEl.textContent = `${garage.occupied} / ${garage.total_spots} occupied`;
-      const drew = GarageMap.render(grid, garage, bySpot);
+      const drew = map.setData(garage, bySpot);
       if (!drew && autoEl.checked) { autoEl.checked = false; syncAutoRefresh(); }
       msg("");
     } catch (err) {
       if (myGen !== gen) return;
       if (err.code === "GM_NOT_FOUND") {
-        grid.innerHTML = ""; summaryEl.textContent = "";
+        map.clear(); summaryEl.textContent = "";
         syncAutoRefresh(); loadGarages();
         msg("This garage is no longer available.", true);
       } else {
@@ -75,7 +79,7 @@
   select.addEventListener("change", () => { msg(""); render(); syncAutoRefresh(); });
   document.getElementById("sim-refresh").addEventListener("click", render);
   autoEl.addEventListener("change", syncAutoRefresh);
-  zoomEl.addEventListener("input", () => grid.style.setProperty("--map-zoom", zoomEl.value));
+  zoomEl.addEventListener("input", () => map.setZoom(zoomEl.value));
 
   // Fill every open spot with simulated cars (reuses the simulate_fill RPC).
   fillBtn.addEventListener("click", async () => {
