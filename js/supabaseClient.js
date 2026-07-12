@@ -122,7 +122,7 @@ function initPortal(role, onReady) {
   }
   
   // Passwords aren't wired up yet — tell teammates when they click the field.
-  const passwordInput = document.getElementById("login-password");
+  /* const passwordInput = document.getElementById("login-password");
   if (passwordInput) {
     passwordInput.addEventListener("focus", () => {
       errorEl.textContent = "🔒 Passwords are not yet implemented — login is username-only for now.";
@@ -130,7 +130,7 @@ function initPortal(role, onReady) {
     passwordInput.addEventListener("blur", () => {
       errorEl.textContent = "";
     });
-  }
+  } */
 
   // Resume an existing session for this role, if any.
   const existing = Auth.get(role);
