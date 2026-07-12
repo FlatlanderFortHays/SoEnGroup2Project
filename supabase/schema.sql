@@ -5,6 +5,11 @@
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
+-- Extensions
+-- ---------------------------------------------------------------------
+create extension if not exists pgcrypto;
+
+-- ---------------------------------------------------------------------
 -- Tables
 -- ---------------------------------------------------------------------
 
@@ -16,6 +21,9 @@ create table if not exists accounts (
   created_at  timestamptz not null default now(),
   unique (username, role)
 );
+
+-- Upgrade databases created before these existed
+alter table accounts add column if not exists password_hash text;
 
 -- A parking garage created by an owner.
 --   Layout: `floors` levels, each with `rows` aisles (lettered A, B, C…) of
