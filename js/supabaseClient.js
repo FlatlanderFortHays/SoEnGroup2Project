@@ -122,7 +122,7 @@ function initPortal(role, onReady) {
   }
   
   // Passwords aren't wired up yet — tell teammates when they click the field.
-  const passwordInput = document.getElementById("login-password");
+  // (reuses the passwordInput declared above; a second `const` here was a merge dup)
   if (passwordInput) {
     passwordInput.addEventListener("focus", () => {
       errorEl.textContent = "🔒 Passwords are not yet implemented — login is username-only for now.";

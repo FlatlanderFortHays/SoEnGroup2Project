@@ -138,6 +138,8 @@ initPortal("user", (session) => {
       model:         document.getElementById("car-model").value.trim(),
       color:         document.getElementById("car-color").value.trim(),
       license_plate: document.getElementById("car-plate").value.trim(),
+      size:          document.getElementById("car-size").value,
+      is_ev:         document.getElementById("car-ev").checked,
     };
     if (!car.make || !car.model || !car.color || !car.license_plate) {
       carMsg.textContent = "Please fill in all four car fields.";

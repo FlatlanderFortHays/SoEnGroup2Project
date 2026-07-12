@@ -72,17 +72,11 @@
           <button id="map-refresh" class="btn btn-ghost" type="button">Refresh</button>
           <label class="check"><input id="map-auto" type="checkbox" /> Auto-refresh</label>
           <label class="check">Zoom
-            <input id="map-zoom" type="range" min="0.4" max="1.5" step="0.1" value="1" />
+            <input id="map-zoom" type="range" min="1" max="8" step="0.25" value="1" />
           </label>
         </div>
-        <div class="legend" style="margin-top: 10px;">
-          <span class="legend-item"><span class="legend-swatch available"></span> Available</span>
-          <span class="legend-item"><span class="legend-swatch occupied"></span> Occupied</span>
-          <span class="legend-item">🧪 Simulated car</span>
-        </div>
-        <div id="map-viewport" class="map-viewport">
-          <div id="map-grid"></div>
-        </div>
+        <p class="hint" style="margin-top: 8px;">Yellow stalls = open · a car = taken · ⚡ badge = EV · violet tag = simulated. Drag to pan, scroll or the slider to zoom; pick a level on the floor rail.</p>
+        <div id="map-viewport" class="map-viewport"></div>
         <p id="map-msg" class="msg"></p>
       </div>
     </section>

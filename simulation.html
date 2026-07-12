@@ -36,20 +36,13 @@
 
       <p id="sim-summary" class="lot-summary muted"></p>
 
-      <div class="legend">
-        <span class="legend-item"><span class="legend-swatch available"></span> Available</span>
-        <span class="legend-item"><span class="legend-swatch occupied"></span> Occupied</span>
-        <span class="legend-item">🧪 Simulated car</span>
-      </div>
-
       <div class="row" style="margin-top: 8px;">
         <label class="check">Zoom
-          <input id="sim-zoom" type="range" min="0.4" max="1.5" step="0.1" value="1" />
+          <input id="sim-zoom" type="range" min="1" max="8" step="0.25" value="1" />
         </label>
       </div>
-      <div id="sim-viewport" class="map-viewport">
-        <div id="sim-grid" class="lot-grid"></div>
-      </div>
+      <div id="sim-viewport" class="map-viewport"></div>
+      <p class="hint" style="margin-top: 8px;">Yellow stalls = open · a car = taken · ⚡ badge = EV · violet tag = simulated. Drag to pan, scroll or the slider to zoom; pick a level on the floor rail.</p>
       <p id="sim-msg" class="msg"></p>
     </div>
   </main>

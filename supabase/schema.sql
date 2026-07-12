@@ -41,6 +41,37 @@ alter table garages add column if not exists floors        integer;
 alter table garages add column if not exists rows          integer;
 alter table garages add column if not exists slots_per_row integer;
 
+-- Keep total_spots in lock-step with the floor/row/slot layout. total_spots is the
+-- canonical count every function/view reads; the map (js/garageMap.js) derives its
+-- geometry from the dimensions. Enforcing the equality here means the two can never
+-- disagree — no matter whether a row is created by the app, hand-edited in the table
+-- editor, or backfilled. (Legacy flat lots with NULL dimensions are left as-is: they
+-- keep their user-supplied total_spots and render as a single-floor grid.)
+create or replace function garages_sync_total_spots()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.floors is not null and new.rows is not null and new.slots_per_row is not null then
+    new.total_spots := new.floors * new.rows * new.slots_per_row;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_garages_sync_total_spots on garages;
+create trigger trg_garages_sync_total_spots
+  before insert or update on garages
+  for each row execute function garages_sync_total_spots();
+
+-- One-time repair of any pre-trigger rows whose stored total_spots drifted from their
+-- layout (e.g. a legacy flat lot that later had floors/rows/slots attached). Without
+-- this, simulate_fill / the availability counts only cover the first floors.
+update garages
+   set total_spots = floors * rows * slots_per_row
+ where floors is not null and rows is not null and slots_per_row is not null
+   and total_spots <> floors * rows * slots_per_row;
+
 -- A car registered by a user.
 create table if not exists cars (
   id            bigint generated always as identity primary key,
@@ -49,8 +80,17 @@ create table if not exists cars (
   model         text not null,
   color         text not null,
   license_plate text not null,
+  size          text not null default 'normal' check (size in ('compact','normal','large')),
+  is_ev         boolean not null default false,
   created_at    timestamptz not null default now()
 );
+
+-- Upgrade databases created before the car size/EV columns existed (safe to re-run).
+-- The inline check lives in the "add column" so it's idempotent (no separate
+-- "add constraint if not exists" needed); existing rows backfill to the defaults.
+alter table cars add column if not exists size text not null default 'normal'
+  check (size in ('compact','normal','large'));
+alter table cars add column if not exists is_ev boolean not null default false;
 
 -- An active/expired parking reservation. A reservation is "active" while
 -- parked_until > now(); expired ones are simply ignored (no cleanup job).
@@ -112,6 +152,8 @@ select
   c.make,
   c.model,
   c.color,
+  c.size,
+  c.is_ev,
   c.license_plate
 from reservations r
 join garages g on g.id = r.garage_id
@@ -211,6 +253,7 @@ declare
   makes  text[] := array['Toyota','Honda','Ford','Tesla','BMW','Kia','Mazda','Subaru','Nissan','Jeep'];
   models text[] := array['Sedan','Coupe','SUV','Hatchback','Truck','Van','Wagon'];
   colors text[] := array['Black','White','Red','Blue','Silver','Green','Gray'];
+  sizes  text[] := array['compact','normal','large'];
   ltrs   text   := 'ABCDEFGHJKLMNPRSTUVWXYZ';
 begin
   select total_spots into v_total from garages where id = p_garage_id for update;
@@ -242,13 +285,15 @@ begin
             || '-'
             || lpad((floor(random() * 10000))::int::text, 4, '0');
 
-    insert into cars (user_id, make, model, color, license_plate)
+    insert into cars (user_id, make, model, color, license_plate, size, is_ev)
     values (
       v_sim,
       makes [1 + floor(random() * array_length(makes, 1))::int],
       models[1 + floor(random() * array_length(models, 1))::int],
       colors[1 + floor(random() * array_length(colors, 1))::int],
-      v_plate
+      v_plate,
+      sizes[1 + floor(random() * array_length(sizes, 1))::int],
+      random() < 0.2
     )
     returning id into v_car;
 
