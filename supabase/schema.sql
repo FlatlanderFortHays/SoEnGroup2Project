@@ -132,6 +132,63 @@ where r.parked_until > now();
 --   logic is correct and atomic regardless of row-level security.
 -- ---------------------------------------------------------------------
 
+
+-- Create a new account with a hashed password. Returns {id, username, role}
+-- as JSON - the hash itself never leaves the database.
+create or replace function signup(p_username text, p_password text, p_role text)
+returns JSON
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  acct accounts;
+begin
+  p_username := trim(p_username);
+  if p_username is null or p_username = '' then 
+    raise exception 'Please enter a username.';
+  end if;
+  if p_password is null or length(p_password) < 4 then 
+    raise exception 'Password must be at least 4 characters.';
+  end if;
+  if p_role not in ('user', 'owner', 'tow') then 
+    raise exception 'Invalid role.';
+  end if;
+
+  insert into accounts (username, role, password_hash)
+  values (p_username, p_role, crypt(p_password, gen_salt('bf')))
+  returning * into acct;
+
+  return json_build_object('id', acct.id, 'username', acct.username, 'role', acct.role);
+  exception 
+  when unique_violation then 
+    raise exception 'That username is already taken for the % role.', p_role;
+  end;
+  $$;
+
+-- Verify {username, password, role} against the stored hash.
+create or replace function login(p_username text, p_password text, p_role text) 
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$ 
+declare 
+  acct accounts;
+begin 
+  select * into acct from accounts a 
+    where a.username = trim(p_username) and a.role = p_role;
+
+  if acct.id is null or acct.password_hash is null 
+    or acct.password_hash <> crypt(p_password, acct.password_hash) then
+    raise exception 'Incorrect username or pasword.';
+  end if;
+
+  return json_build_object('id', acct.id, 'username', acct.username, 'role', acct.role);
+end;
+$$;
+
+
 -- Park a car in the lowest-numbered free spot of a garage.
 -- Returns the assigned spot + expiry, or raises 'No spots available'.
 create or replace function park_car(
