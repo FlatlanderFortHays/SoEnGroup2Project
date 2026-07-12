@@ -138,6 +138,15 @@ ul.list { list-style: none; padding: 0; margin: 12px 0 0; }
 }
 .list-row:last-child { border-bottom: none; }
 
+/* A garage row on the user portal: click it to price the booking banner for that
+   garage (rates are per-garage, so a single figure up top would otherwise be a guess). */
+.garage-row { cursor: pointer; border-left: 3px solid transparent; padding-left: 8px; }
+.garage-row:hover { background: #f8fafc; }
+.garage-row.is-selected {
+  border-left-color: var(--brand);
+  background: #eff6ff;
+}
+
 .badge {
   font-size: 0.85rem;
   font-weight: 600;
