@@ -4,7 +4,7 @@
 // to that portal.
 
 (function() {
-    const ROLE_PAGES = { user: "user.html", owner: "owner.html", to: "tow.html" };
+    const ROLE_PAGES = { user: "user.html", owner: "owner.html", tow: "tow.html" };
 
     const params    = new URLSearchParams(location.search);
     const roleE1    = document.getElementById("signup-role");
