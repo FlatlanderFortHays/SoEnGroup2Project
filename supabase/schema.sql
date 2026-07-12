@@ -181,7 +181,7 @@ begin
 
   if acct.id is null or acct.password_hash is null 
     or acct.password_hash <> crypt(p_password, acct.password_hash) then
-    raise exception 'Incorrect username or pasword.';
+    raise exception 'Incorrect username or password.';
   end if;
 
   return json_build_object('id', acct.id, 'username', acct.username, 'role', acct.role);
