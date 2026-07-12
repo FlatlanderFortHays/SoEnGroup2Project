@@ -17,12 +17,30 @@ initPortal("user", (session) => {
   const parkStartTimeInput  = document.getElementById("park-start-time");
   const calcStartSpan       = document.getElementById("calc-start");
   const calcEndSpan         = document.getElementById("calc-end");
+  const calcCostSpan        = document.getElementById("calc-cost");
 
   // Reservation Alteration Elements
   const myReservationsList = document.getElementById("my-reservations-list");
   const manageMsgEl = document.getElementById("manage-msg");
 
   let cars = [];
+
+  // Garages are cached so the per-row price estimates can be re-rendered on every
+  // keystroke in the Hours box without re-hitting the network.
+  let garages = [];
+  let garagesState = "loading";   // "loading" | "error" | "ready"
+  let selectedGarageId = null;    // clicking a garage row prices the banner for it
+
+  // The user's own bookings, kept so Extend can quote the added cost from each row's
+  // snapshotted rates before committing anything.
+  let myReservations = [];
+
+  let warnedNoPricing = false;   // the "re-run schema.sql" nag fires at most once
+
+  // Re-rendering the garage rows swaps out their DOM, which would replace the disabled
+  // "Book spot" button mid-request with a fresh enabled one and let the booking be
+  // submitted twice. Hold off re-rendering while a booking is in flight.
+  let bookingInFlight = false;
 
   // Initialize input parameters with current local calendar constraints
   if (parkStartTimeInput) {
@@ -49,9 +67,11 @@ initPortal("user", (session) => {
   // Recalculates departure timestamps locally in real time
   function updateCalculatedTimeline() {
     if (!bookingTypeSelect || !hoursEl) return;
-    
+
     const bookingType = bookingTypeSelect.value;
     const hoursVal = readHours();
+
+    updateCostEstimate(hoursVal);
 
     if (!hoursVal) {
       if (calcStartSpan) calcStartSpan.textContent = "--";
@@ -62,26 +82,55 @@ initPortal("user", (session) => {
     let startDate;
 
     if (bookingType === "now") {
-      startDate = new Date(); 
+      startDate = new Date();
     } else if (bookingType === "future" && parkStartTimeInput && parkStartTimeInput.value) {
-      startDate = new Date(parkStartTimeInput.value); 
+      startDate = new Date(parkStartTimeInput.value);
     } else {
       if (calcStartSpan) calcStartSpan.textContent = "--";
       if (calcEndSpan) calcEndSpan.textContent = "--";
       return;
     }
 
-    const endDate = new Date(startDate.getTime() + Math.round(hoursVal * 60) * 60000);
+    const endDate = new Date(startDate.getTime() + Pricing.hoursToMinutes(hoursVal) * 60000);
 
-    const options = { 
-      month: 'short', 
-      day: 'numeric', 
-      hour: 'numeric', 
-      minute: '2-digit' 
+    const options = {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
     };
 
     if (calcStartSpan) calcStartSpan.textContent = startDate.toLocaleString([], options);
     if (calcEndSpan) calcEndSpan.textContent = endDate.toLocaleString([], options);
+  }
+
+  // The cost depends on the hours and the GARAGE — not on the booking type, and not on
+  // a date being picked yet. Rates are per-garage, but a garage isn't chosen until the
+  // user clicks a row below, so: show the selected garage's exact price once one is
+  // picked, otherwise the range across the garages on offer. On a fresh database every
+  // garage carries the same default rate card, so that range collapses to one number.
+  function updateCostEstimate(hoursVal) {
+    if (!calcCostSpan) return;
+
+    if (!hoursVal) { calcCostSpan.textContent = "--"; return; }
+
+    const selected = garages.find((g) => g.id === selectedGarageId);
+    if (selected) {
+      const q = Pricing.quote(selected, hoursVal);
+      calcCostSpan.textContent =
+        `${q.formatted} at ${selected.name}${q.capped ? " · daily cap applied" : ""}`;
+      return;
+    }
+
+    if (!garages.length) { calcCostSpan.textContent = "--"; return; }
+
+    const prices = garages.map((g) => Pricing.priceCents(g, Pricing.hoursToMinutes(hoursVal)));
+    const lo = Math.min(...prices);
+    const hi = Math.max(...prices);
+
+    calcCostSpan.textContent = lo === hi
+      ? `${Pricing.formatCents(lo)} at any garage below`
+      : `${Pricing.formatCents(lo)}–${Pricing.formatCents(hi)} — varies by garage; pick one below`;
   }
 
   // Fire updates whenever inputs scale or change values
@@ -89,7 +138,10 @@ initPortal("user", (session) => {
     parkStartTimeInput.addEventListener("input", updateCalculatedTimeline);
   }
   if (hoursEl) {
-    hoursEl.addEventListener("input", updateCalculatedTimeline);
+    hoursEl.addEventListener("input", () => {
+      updateCalculatedTimeline();
+      renderGarages();   // re-price the rows from cache — no network hit per keystroke
+    });
   }
 
   function parkMsg(text, isError) {
@@ -138,6 +190,8 @@ initPortal("user", (session) => {
       model:         document.getElementById("car-model").value.trim(),
       color:         document.getElementById("car-color").value.trim(),
       license_plate: document.getElementById("car-plate").value.trim(),
+      size:          document.getElementById("car-size").value,
+      is_ev:         document.getElementById("car-ev").checked,
     };
     if (!car.make || !car.model || !car.color || !car.license_plate) {
       carMsg.textContent = "Please fill in all four car fields.";
@@ -152,26 +206,68 @@ initPortal("user", (session) => {
   });
 
   // ---- Garages / parking ----
+  // Fetch is split from render so the per-garage price estimates can be recomputed on
+  // every keystroke in the Hours box without another round-trip to the database.
   async function loadGarages() {
     const { data, error } = await sb
       .from("garage_availability").select("*").order("name");
 
     if (error) {
+      garages = [];
+      garagesState = "error";
       garageList.innerHTML = `<li class="error">${escapeHtml(error.message)}</li>`;
+      updateCostEstimate(readHours());
       return;
     }
-    if (!data.length) {
+
+    garages = data;
+    garagesState = "ready";
+
+    // If the selected garage vanished (deleted, renamed away), drop the selection.
+    if (selectedGarageId != null && !garages.some((g) => g.id === selectedGarageId)) {
+      selectedGarageId = null;
+    }
+
+    // An un-migrated database returns no rate columns. Say so plainly rather than
+    // quietly pricing everything at made-up defaults. Once only — loadGarages() re-runs
+    // after every booking, and this must not stomp on the success message.
+    if (!warnedNoPricing && garages.length && !garages.some((g) => Pricing.hasRates(g))) {
+      warnedNoPricing = true;
+      parkMsg("⚠️ This database is missing the pricing columns — re-run supabase/schema.sql. Prices shown are estimates.", true);
+    }
+
+    renderGarages();
+    updateCostEstimate(readHours());   // rates only just arrived; price the banner now
+  }
+
+  function renderGarages() {
+    if (garagesState !== "ready") return;   // don't clobber a loading/error message
+    if (bookingInFlight) return;            // don't swap the in-flight button out from under us
+
+    if (!garages.length) {
       garageList.innerHTML = `<li class="muted">No garages yet. Ask an owner to add one.</li>`;
       return;
     }
 
-    garageList.innerHTML = data.map((g) => {
+    const hours = readHours();
+    const isFutureMode = bookingTypeSelect && bookingTypeSelect.value === "future";
+
+    garageList.innerHTML = garages.map((g) => {
       const full = g.open_spots <= 0;
-      const isFutureMode = bookingTypeSelect && bookingTypeSelect.value === "future";
-      
+      const selected = g.id === selectedGarageId;
+      const quote = hours ? Pricing.quote(g, hours) : null;
+
+      const priceBadge = quote
+        ? `<span class="badge" title="Estimated cost for ${escapeHtml(String(hours))}h">${quote.formatted}${quote.capped ? " · cap" : ""}</span>`
+        : "";
+
       return `
-        <li class="list-row">
-          <span class="grow"><strong>${escapeHtml(g.name)}</strong></span>
+        <li class="list-row garage-row${selected ? " is-selected" : ""}" data-garage="${g.id}">
+          <span class="grow">
+            <strong>${escapeHtml(g.name)}</strong>
+            <br /><span class="muted">${escapeHtml(Pricing.rateCard(g))}</span>
+          </span>
+          ${priceBadge}
           <span class="badge ${full && !isFutureMode ? "badge-full" : ""}">${g.open_spots}/${g.total_spots} open now</span>
           <button class="btn" data-park="${g.id}">Book spot</button>
           <button class="btn btn-ghost" data-sim="${g.id}" title="Demo: instantly fill the lot">Simulate full lot</button>
@@ -186,12 +282,24 @@ initPortal("user", (session) => {
   garageList.addEventListener("click", async (event) => {
     const parkId = event.target.getAttribute("data-park");
     const simId  = event.target.getAttribute("data-sim");
-    if (!parkId && !simId) return;
+
+    // Clicking the row itself (not one of its buttons) selects that garage, which
+    // prices the banner above for it.
+    if (!parkId && !simId) {
+      const row = event.target.closest(".garage-row");
+      if (!row) return;
+      const id = Number(row.dataset.garage);
+      selectedGarageId = selectedGarageId === id ? null : id;
+      renderGarages();
+      updateCostEstimate(readHours());
+      return;
+    }
 
     const hours = readHours();
     if (!hours) { parkMsg("Enter a valid number of hours.", true); return; }
 
     event.target.disabled = true;
+    bookingInFlight = true;
     try {
       if (parkId) {
         if (!cars.length) { parkMsg("Add a car first (above).", true); return; }
@@ -217,7 +325,9 @@ initPortal("user", (session) => {
             parkMsg(msg, true);
           } else {
             const row = Array.isArray(data) ? data[0] : data;
-            parkMsg(`✅ Parked in spot #${row.spot_number} until ${new Date(row.parked_until).toLocaleString()}`, false);
+            // row.price is what the DB actually charged — show that, not our estimate.
+            const cost = row.price != null ? ` — ${Pricing.money(row.price)}` : "";
+            parkMsg(`✅ Parked in spot #${row.spot_number} until ${new Date(row.parked_until).toLocaleString()}${cost}`, false);
           }
         } else if (bookingType === "future") {
           // Route 2: Call Planned Future Reservation Engine
@@ -251,8 +361,9 @@ initPortal("user", (session) => {
             const displaySpot  = row.spot_number;
             const displayStart = new Date(row.parked_at).toLocaleString();
             const displayEnd   = new Date(row.parked_until).toLocaleString();
+            const cost = row.price != null ? ` — ${Pricing.money(row.price)}` : "";
 
-            parkMsg(`📅 Success! Spot #${displaySpot} is reserved for you from ${displayStart} until ${displayEnd}`, false);
+            parkMsg(`📅 Success! Spot #${displaySpot} is reserved for you from ${displayStart} until ${displayEnd}${cost}`, false);
           }
         }
       } else {
@@ -267,6 +378,7 @@ initPortal("user", (session) => {
       }
     } finally {
       event.target.disabled = false;
+      bookingInFlight = false;
       updateCalculatedTimeline();
       loadGarages();
       loadUserReservations(); // Automatically refresh reservations list after booking
@@ -283,11 +395,14 @@ initPortal("user", (session) => {
   async function loadUserReservations() {
     if (!myReservationsList) return;
 
-    // Fetch historical log entries associated with the authenticated account session
+    // Fetch historical log entries associated with the authenticated account session.
+    // "*" rather than an explicit column list: on a database that hasn't had the
+    // pricing migration run yet, naming `price` here would turn this whole panel into
+    // a raw "column does not exist" error and take Extend/Edit/Cancel down with it.
     const { data, error } = await sb
       .from("reservations")
       .select(`
-        id, spot_number, parked_at, parked_until, is_simulated,
+        *,
         garages(name),
         cars(license_plate, make, model, user_id)
       `)
@@ -300,6 +415,7 @@ initPortal("user", (session) => {
 
     // Filter to ensure we only display records matching current logged-in user profile identity session
     const validReservations = data.filter(r => r.cars && r.cars.user_id === session.id && r.garages);
+    myReservations = validReservations;   // Extend prices its quote from these rows
 
     if (!validReservations.length) {
       myReservationsList.innerHTML = `<li class="muted">You have no active or scheduled bookings.</li>`;
@@ -328,15 +444,22 @@ initPortal("user", (session) => {
         actionControls = `<button class="btn" data-action="extend" data-id="${r.id}">Extend Stay</button>`;
       }
 
+      // The price stored on the booking — not a recomputation. It was locked in when
+      // the driver booked, so it stays put even if the owner later changes their rates.
+      // Rows created before pricing existed have no price; money() renders those as "—".
+      const durationMins = Math.round((end - start) / 60000);
+      const costLine = `💵 <strong>${Pricing.money(r.price)}</strong> for ${Pricing.formatHours(durationMins)}`;
+
       return `
         <li class="list-row" style="flex-direction: column; align-items: flex-start; gap: 0.5rem; padding: 1rem 0; border-bottom: 1px solid #eee;">
           <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
             <strong>${escapeHtml(r.garages.name)} — Spot #${r.spot_number}</strong>
             ${statusBadge}
           </div>
-          <div class="grow muted text-s">
+          <div class="grow muted">
             🚗 <span class="mono">${escapeHtml(r.cars.license_plate)}</span> (${escapeHtml(r.cars.make)} ${escapeHtml(r.cars.model)})<br>
-            📅 ${start.toLocaleString()} to ${end.toLocaleString()}
+            📅 ${start.toLocaleString()} to ${end.toLocaleString()}<br>
+            ${costLine}
           </div>
           <div style="display: flex; gap: 0.5rem; margin-top: 0.25rem;">
             ${actionControls}
@@ -372,6 +495,39 @@ initPortal("user", (session) => {
           const hours = parseFloat(extra);
           if (!hours || hours <= 0) return;
 
+          // Quote the extension before committing it. The server re-prices the WHOLE
+          // window (that's what keeps the daily cap honest), so the added cost is the
+          // difference between the new total and what's already on the booking — which
+          // is why extending into the cap can legitimately cost $0.00.
+          const res = myReservations.find((r) => r.id === Number(resId));
+          if (!res || res.price == null) {
+            // Fail closed: never extend a booking we can't put a price on.
+            manageMsg("⚠️ Couldn't price that extension right now, so nothing was changed. Refresh and try again.", true);
+            return;
+          }
+
+          const totalMins =
+            Math.round((new Date(res.parked_until) - new Date(res.parked_at)) / 60000)
+            + Pricing.hoursToMinutes(hours);
+          const rates = {
+            first_hour_rate: res.rate_first_hour,
+            hourly_rate:     res.rate_hourly,
+            daily_cap:       res.rate_daily_cap,
+          };
+          const newTotal = Pricing.priceCents(rates, totalMins);
+          const alreadyPaid = Math.round(Number(res.price) * 100);
+          const added = Math.max(0, newTotal - alreadyPaid);
+
+          const note = added === 0
+            ? "\n\nYou've already hit the daily cap — these extra hours are free."
+            : "";
+          const ok = confirm(
+            `Extend by ${hours}h?\n\n` +
+            `Added cost: ${Pricing.formatCents(added)}\n` +
+            `New total:  ${Pricing.formatCents(newTotal)}${note}`
+          );
+          if (!ok) return;
+
           const { data, error } = await sb.rpc("extend_current_reservation", {
             p_reservation_id: Number(resId),
             p_extra_hours: hours
@@ -380,7 +536,8 @@ initPortal("user", (session) => {
           if (error) manageMsg(error.message, true);
           else {
             const row = Array.isArray(data) ? data[0] : data;
-            manageMsg(`✅ Stay extended successfully until ${new Date(row.parked_until).toLocaleString()}!`, false);
+            const cost = row.price != null ? ` — now ${Pricing.money(row.price)} total` : "";
+            manageMsg(`✅ Stay extended successfully until ${new Date(row.parked_until).toLocaleString()}${cost}!`, false);
             loadUserReservations();
           }
         }

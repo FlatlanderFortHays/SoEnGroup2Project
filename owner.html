@@ -50,9 +50,19 @@
           <label>Slots per row
             <input id="garage-slots" type="number" min="1" step="1" value="10" />
           </label>
+          <label>First hour ($)
+            <input id="garage-first-hour" type="number" min="0" step="0.25" value="5" />
+          </label>
+          <label>Per hour after ($)
+            <input id="garage-hourly" type="number" min="0" step="0.25" value="3" />
+          </label>
+          <label>Daily cap ($)
+            <input id="garage-cap" type="number" min="0" step="0.25" value="25" />
+          </label>
           <button class="btn" type="submit">Add garage</button>
         </form>
         <p class="hint" style="margin-top: 16px;">Each floor has the same rows; each row is an aisle (odds one side, evens the other). Spots are labelled like A203 — row A, floor 2, spot 03.</p>
+        <p class="hint">Pricing: the first hour is charged in full, every hour after it is pro-rated by the minute, and a driver never pays more than the daily cap per 24 hours. Set the cap to 0 for no cap.</p>
         <p id="garage-msg" class="msg error"></p>
       </div>
 
@@ -72,17 +82,11 @@
           <button id="map-refresh" class="btn btn-ghost" type="button">Refresh</button>
           <label class="check"><input id="map-auto" type="checkbox" /> Auto-refresh</label>
           <label class="check">Zoom
-            <input id="map-zoom" type="range" min="0.4" max="1.5" step="0.1" value="1" />
+            <input id="map-zoom" type="range" min="1" max="8" step="0.25" value="1" />
           </label>
         </div>
-        <div class="legend" style="margin-top: 10px;">
-          <span class="legend-item"><span class="legend-swatch available"></span> Available</span>
-          <span class="legend-item"><span class="legend-swatch occupied"></span> Occupied</span>
-          <span class="legend-item">🧪 Simulated car</span>
-        </div>
-        <div id="map-viewport" class="map-viewport">
-          <div id="map-grid"></div>
-        </div>
+        <p class="hint" style="margin-top: 8px;">Yellow stalls = open · a car = taken · ⚡ badge = EV · violet tag = simulated. Drag to pan, scroll or the slider to zoom; pick a level on the floor rail.</p>
+        <div id="map-viewport" class="map-viewport"></div>
         <p id="map-msg" class="msg"></p>
       </div>
     </section>
@@ -91,6 +95,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
   <script src="js/supabaseClient.js"></script>
+  <script src="js/price.js"></script>
   <script src="js/garageMap.js"></script>
   <script src="js/owner.js"></script>
 </body>

@@ -42,6 +42,12 @@
           <input id="car-model" placeholder="Model (e.g. Corolla)" autocomplete="off" />
           <input id="car-color" placeholder="Color (e.g. Blue)"    autocomplete="off" />
           <input id="car-plate" placeholder="License plate"        autocomplete="off" />
+          <select id="car-size" title="Vehicle size">
+            <option value="compact">Compact</option>
+            <option value="normal" selected>Normal</option>
+            <option value="large">Large</option>
+          </select>
+          <label class="check"><input id="car-ev" type="checkbox" /> Electric (EV)</label>
           <button class="btn" type="submit">Add car</button>
         </form>
         <p id="car-msg" class="msg error"></p>
@@ -76,9 +82,12 @@
         <!-- Calculated Timeline Banner positioned cleanly below all input choices -->
         <div id="reservation-summary" class="mono" style="margin-top: 1rem; padding: 0.5rem; background: #f5f5f5; border-left: 4px solid #0066cc; font-size: 0.9rem;">
           Calculated Window: <span id="calc-start" style="font-weight:600;">--</span> to <span id="calc-end" style="font-weight:600; color: #cc0000;">--</span>
+          <br />
+          Estimated cost: <span id="calc-cost" style="font-weight:600;">--</span>
         </div>
 
         <p id="park-msg" class="msg"></p>
+        <p class="hint">Prices are set per garage. Click a garage below to see its exact cost here.</p>
         <ul id="garage-list" class="list"></ul>
       </div>
 
@@ -93,6 +102,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
   <script src="js/supabaseClient.js"></script>
+  <script src="js/price.js"></script>
   <script src="js/user.js"></script>
   <script src="js/validation.js" defer></script>
 </body>

@@ -18,7 +18,10 @@ function escapeHtml(value) {
   ));
 }
 
-// ---- Username-only "login", remembered per role in localStorage ----
+// ---- Username + password login, remembered per role in localStorage ----
+// The password is bcrypt-hashed in Postgres by the signup()/login() functions
+// in supabase/schema.sql; the browser only ever sends the plaintext over HTTPS
+// and stores the returned {id, username, role} — never a hash.
 // (Per-role keys mean one person can be logged into all three portals in the
 //  same browser — handy for demos.)
 const Auth = {
@@ -50,7 +53,13 @@ const Auth = {
     });
     if (error) throw new Error(error.message);
 
-    const session = { id, datalid, username: data.username, role: data.role };
+    // signup() is `returns table (...)`, i.e. a SET — so supabase-js hands back
+    // an ARRAY, and a bare `data.id` would be undefined. (Same idiom as
+    // js/user.js where park_car's result is unwrapped.)
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error("Sign-up failed. Please try again.");
+
+    const session = { id: row.id, username: row.username, role: row.role };
     this.set(role, session);
     return session;
   },
@@ -68,7 +77,14 @@ const Auth = {
     });
     if (error) throw new Error(error.message);
 
-    const session = { id: data.id, username: data.username, role: data.role };
+    // login() is `returns table (...)` too — unwrap the array (see signup above).
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error("Invalid username or password.");
+    // initPortal only resumes a session when session.role === the portal's role,
+    // so guard the invariant here rather than silently landing on a login screen.
+    if (row.role !== role) throw new Error(`That account is not a ${role} account.`);
+
+    const session = { id: row.id, username: row.username, role: row.role };
     this.set(role, session);
     return session;
   },
@@ -120,17 +136,6 @@ function initPortal(role, onReady) {
       location.href = `signup.html?role=${role}`;
     });
   }
-  
-  // Passwords aren't wired up yet — tell teammates when they click the field.
-  /* const passwordInput = document.getElementById("login-password");
-  if (passwordInput) {
-    passwordInput.addEventListener("focus", () => {
-      errorEl.textContent = "🔒 Passwords are not yet implemented — login is username-only for now.";
-    });
-    passwordInput.addEventListener("blur", () => {
-      errorEl.textContent = "";
-    });
-  } */
 
   // Resume an existing session for this role, if any.
   const existing = Auth.get(role);
