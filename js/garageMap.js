@@ -38,7 +38,7 @@
   const SPRITES_ENABLED = false;
 
   // World-pixel geometry at zoom 1. Stalls are deeper than wide (cars nose in).
-  const STALL_W = 30, STALL_D = 46, GAP = 6, AISLE = 26, ROW_GAP = 24,
+  const STALL_W = 30, STALL_D = 46, GAP = 0, AISLE = 50, ROW_GAP = 0,
         ROW_LABEL_W = 28, PAD = 18;
 
   // Palette
