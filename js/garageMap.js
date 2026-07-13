@@ -4,7 +4,10 @@
 //  Owner portal's read-only map panel (js/owner.js). Both drive the same
 //  controller, so there is one renderer and no duplicated logic.
 //
-//  Load AFTER supabaseClient.js (uses the globals `sb` and `escapeHtml`).
+//  Load AFTER supabaseClient.js (globals `sb`, `escapeHtml`) and AFTER carColors.js
+//  (global `CarColors`). This file no longer keeps a colour list of its own — every car
+//  colour and hex comes from js/carColors.js, which is also what fills the Color dropdown
+//  and what simulate_fill() paints with.
 //
 //  Pixel-art look: black asphalt, yellow stall lines, bold-yellow spot codes,
 //  and per-(color,size) car sprites with a drawn EV badge. One floor is shown
@@ -22,8 +25,10 @@
 (function () {
   const MAX_SPOTS = 2500;
 
-  // Sprite matrix we actually have art for; anything else falls back to neutral.
-  const CAR_COLORS = ["black", "white", "red", "blue", "silver", "green", "gray"];
+  // Sprite matrix = the shared palette (js/carColors.js), lower-cased for filenames:
+  // assets/cars/<colour>-<size>.png. Adding a colour to the dropdown adds it here for
+  // free — the matrix is 13 x 3 now, not 7 x 3.
+  const CAR_COLORS = CarColors.keys();
   const CAR_SIZES  = ["compact", "normal", "large"];
 
   // Cars currently render as tidy coloured blocks (no art yet). Once pixel-art
@@ -38,7 +43,7 @@
 
   // Palette
   const ASPHALT = "#141414", LINE = "#F6C915", LABEL = "#FFDE3A",
-        EV = "#22c55e", SIM = "#a855f7", NEUTRAL_CAR = "#9aa3af";
+        EV = "#22c55e", SIM = "#a855f7", NEUTRAL_CAR = CarColors.NEUTRAL_HEX;
 
   // Row index -> letter: 0->A, 25->Z, 26->AA, ...
   function rowLetter(i) {
@@ -407,10 +412,11 @@
       ctx.closePath();
     }
 
+    // The name -> hex map is the shared palette (js/carColors.js) — the same list that
+    // fills the Color dropdown and that simulate_fill() paints from. null for an unknown
+    // colour, so both callers below still fall back to NEUTRAL_CAR.
     function knownColor(c) {
-      const map = { black: "#1f2937", white: "#e5e7eb", red: "#dc2626", blue: "#2563eb",
-        silver: "#cbd5e1", green: "#16a34a", gray: "#6b7280", grey: "#6b7280" };
-      return map[String(c || "").toLowerCase()] || null;
+      return CarColors.hexOf(c);
     }
 
     function drawNotice() {

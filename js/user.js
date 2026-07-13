@@ -1,10 +1,11 @@
 // User portal: manage cars, browse garages, park, and (for demos) fill a lot.
 initPortal("user", (session) => {
   // Cars
-  const carForm   = document.getElementById("car-form");
-  const carList   = document.getElementById("car-list");
-  const carMsg    = document.getElementById("car-msg");
-  const carSelect = document.getElementById("park-car");
+  const carForm        = document.getElementById("car-form");
+  const carList        = document.getElementById("car-list");
+  const carMsg         = document.getElementById("car-msg");
+  const carSelect      = document.getElementById("park-car");
+  const carColorSelect = document.getElementById("car-color");
 
   // Parking
   const garageList = document.getElementById("garage-list");
@@ -169,6 +170,7 @@ initPortal("user", (session) => {
       ? data.map((c) => `
           <li class="list-row">
             <span class="mono">${escapeHtml(c.license_plate)}</span>
+            ${CarColors.swatchHtml(c.color)}
             <span class="grow">${escapeHtml(c.color)} ${escapeHtml(c.make)} ${escapeHtml(c.model)}</span>
           </li>`).join("")
       : `<li class="muted">No cars yet — add one above.</li>`;
@@ -188,18 +190,31 @@ initPortal("user", (session) => {
       user_id:       session.id,
       make:          document.getElementById("car-make").value.trim(),
       model:         document.getElementById("car-model").value.trim(),
-      color:         document.getElementById("car-color").value.trim(),
+      // canonical() maps the chosen <option> back onto the exact stored form ('Navy') and
+      // returns null for anything off-palette, so we can never POST a colour the database's
+      // CHECK constraint would reject with a raw Postgres error.
+      color:         CarColors.canonical(carColorSelect.value) || "",
       license_plate: document.getElementById("car-plate").value.trim(),
       size:          document.getElementById("car-size").value,
       is_ev:         document.getElementById("car-ev").checked,
     };
-    if (!car.make || !car.model || !car.color || !car.license_plate) {
-      carMsg.textContent = "Please fill in all four car fields.";
+    if (!car.make || !car.model || !car.license_plate) {
+      carMsg.textContent = "Please fill in the make, model and license plate.";
+      return;
+    }
+    if (!car.color) {
+      carMsg.textContent = "Please pick a color for the car.";
       return;
     }
 
     const { error } = await sb.from("cars").insert(car);
-    if (error) { carMsg.textContent = error.message; return; }
+    if (error) {
+      // 23514 = check_violation, i.e. cars_color_check: the colour isn't in the palette.
+      carMsg.textContent = error.code === "23514"
+        ? "Pick a color from the list (reload the page if you still see a text box)."
+        : error.message;
+      return;
+    }
 
     carForm.reset();
     loadCars();
@@ -367,11 +382,14 @@ initPortal("user", (session) => {
           }
         }
       } else {
-        // Simulation triggers
-        const { data, error } = await sb.rpc("simulate_fill", {
-          p_garage_id: Number(simId),
-          p_count: null,
-          p_hours: hours,
+        // Simulation triggers.
+        // p_colors (inside the helper) is the exact list the Color dropdown above offers, so
+        // the cars the simulation invents and the cars a user can register are one palette.
+        // count: null = fill ALL remaining spots (same call as js/simulation.js).
+        const { data, error } = await CarColors.simulateFill(sb, {
+          garageId: simId,
+          count: null,
+          hours,
         });
         if (error) parkMsg(error.message, true);
         else       parkMsg(`🧪 Simulated ${data} car(s) parking for ${hours}h.`, false);
@@ -573,6 +591,10 @@ initPortal("user", (session) => {
       }
     });
   }
+
+  // The Color dropdown IS the palette (js/carColors.js) — the same list the map paints from
+  // and the same list we hand to simulate_fill().
+  CarColors.fillSelect(carColorSelect);
 
   loadCars();
   loadGarages();

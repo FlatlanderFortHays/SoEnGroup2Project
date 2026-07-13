@@ -90,11 +90,14 @@
 
     fillBtn.disabled = true;
     try {
-      // p_count: null = fill ALL remaining spots (same call as js/user.js).
-      const { data, error } = await sb.rpc("simulate_fill", {
-        p_garage_id: Number(garageId),
-        p_count: null,
-        p_hours: hours,
+      // count: null = fill ALL remaining spots (same call as js/user.js — literally the same
+      // helper, so the two callers can't drift). The helper passes p_colors: the palette from
+      // js/carColors.js, i.e. the same list the Color dropdown on the user portal offers, so
+      // the picker decides what colours park here.
+      const { data, error } = await CarColors.simulateFill(sb, {
+        garageId,
+        count: null,
+        hours,
       });
       if (error) msg(error.message, true);
       else       msg(`🧪 Simulated ${data} car(s) parking for ${hours}h.`, false);

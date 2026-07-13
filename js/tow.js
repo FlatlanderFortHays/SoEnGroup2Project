@@ -44,7 +44,7 @@ initPortal("tow", (session) => {
       <tr>
         <td>${r.spot_number}</td>
         <td class="mono">${escapeHtml(r.license_plate)}</td>
-        <td>${escapeHtml(r.color)} ${escapeHtml(r.make)} ${escapeHtml(r.model)}</td>
+        <td>${CarColors.swatchHtml(r.color)} ${escapeHtml(r.color)} ${escapeHtml(r.make)} ${escapeHtml(r.model)}</td>
         <td>${new Date(r.parked_until).toLocaleString()}</td>
       </tr>`).join("");
 

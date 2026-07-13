@@ -40,7 +40,9 @@
         <form id="car-form" class="grid-2">
           <input id="car-make"  placeholder="Make (e.g. Toyota)"  autocomplete="off" />
           <input id="car-model" placeholder="Model (e.g. Corolla)" autocomplete="off" />
-          <input id="car-color" placeholder="Color (e.g. Blue)"    autocomplete="off" />
+          <!-- Options are injected by js/user.js from CarColors.PALETTE (js/carColors.js) —
+               the same list simulate_fill() paints its cars from. Do not hard-code them here. -->
+          <select id="car-color" title="Color"></select>
           <input id="car-plate" placeholder="License plate"        autocomplete="off" />
           <select id="car-size" title="Vehicle size">
             <option value="compact">Compact</option>
@@ -103,6 +105,7 @@
   <script src="js/config.js"></script>
   <script src="js/supabaseClient.js"></script>
   <script src="js/price.js"></script>
+  <script src="js/carColors.js"></script>
   <script src="js/user.js"></script>
   <script src="js/validation.js" defer></script>
 </body>
