@@ -1,0 +1,88 @@
+@startuml
+skinparam sequenceArrowThickness 1.5
+skinparam roundcorner 8
+skinparam participantBackgroundColor #E6F1FB
+skinparam participantBorderColor #185FA5
+skinparam sequenceLifeLineBorderColor #888780
+skinparam noteBorderColor #854F0B
+skinparam noteBackgroundColor #FAEEDA
+
+actor Customer #EEEDFE
+participant "UI" as UI #E6F1FB
+participant "Reservation Sys." as RS #E1F5EE
+participant "Pricing Engine" as PE #FAEEDA
+database "Database" as DB #F1EFE8
+participant "Reservation\nPublisher" as RP #EDE3F6
+participant "Garage Map\nSubscriber" as GM #E3F6E8
+participant "Tow Portal\nSubscriber" as TP #F6E3E3
+participant "User Reservation\nSubscriber" as UR #E3EEF6
+
+Customer -> UI : open parking selection screen\nchoose Immediate or Schedule
+UI --> Customer : display input fields\n(location, date, time)
+
+Customer -> UI : submit(location, time)
+UI -> RS : searchAvailableLots(location, time)
+RS -> DB : fetchMatchingLots(criteria)
+DB --> RS : lotList[]
+RS -> PE : getRates(lotList)
+PE --> RS : pricedLotList[]
+RS --> UI : return available locations
+UI --> Customer : display lot list
+
+Customer -> UI : selectLot(lotId)
+UI -> RS : getStallMap(lotId)
+RS -> DB : fetchStalls(lotId)
+DB --> RS : stallMap[]
+RS --> UI : return stall map
+UI --> Customer : display stall map\n(available, reserved, special)
+
+Customer -> UI : selectStall(stallId)
+UI --> Customer : highlight stall, show\nstall number, type, rate
+
+Customer -> UI : selectVehicle(vehicleId)
+UI -> RS : calculateCost(stallId, vehicleId, time)
+RS -> PE : computeRate(stallId, time)
+PE --> RS : cost{}
+RS --> UI : return reservation summary
+UI --> Customer : display reservation summary
+
+Customer -> UI : confirmReservation()
+UI -> RS : createReservation(stallId, vehicleId, time)
+RS -> DB : writeReservation()\n(sb.rpc "park_car" / "reserve_car")
+RS -> DB : markStallReserved(stallId)
+DB --> RS : success
+
+RS -> RP : publish(ReservationCreatedEvent)
+RS --> UI : reservation confirmed
+UI --> Customer : display confirmation screen
+
+par Publisher notifies every subscriber
+  RP -> GM : notify(event)
+  GM -> DB : GarageMap.load(garageId)
+  GM --> GM : map.setData()\nre-render canvas
+else
+  RP -> TP : notify(event)
+  TP -> DB : select currently_parked\nwhere garage_id=...
+  TP --> TP : renderRows()
+else
+  RP -> UR : notify(event)
+  UR --> UR : loadUserReservations()\nrefresh "My Reservations"
+end
+
+note over RS, PE
+  Creator — RS creates reservation records
+  Expert — PE owns all rate calculations
+  Low Coupling — UI never touches DB directly
+  High Cohesion — each object has one responsibility
+  REQ-26 — writeReservation()/markStallReserved() prevent double-booking
+end note
+
+note over RS, UR
+  Observer / Publisher-Subscriber
+  Low Coupling — RS knows only RP, never GM/TP/UR directly
+  High Cohesion — RS's job ends at publish(); each Subscriber
+  owns its own refresh logic (today: GM/Sim poll every 5s,
+  TP has no auto-refresh at all — this removes both gaps)
+  REQ-26 — every view reflects occupancy without manual refresh
+end note
+@enduml

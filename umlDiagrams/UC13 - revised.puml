@@ -1,0 +1,93 @@
+@startuml
+skinparam sequenceArrowThickness 1.5
+skinparam roundcorner 8
+skinparam participantBackgroundColor #E6F1FB
+skinparam participantBorderColor #185FA5
+skinparam sequenceLifeLineBorderColor #888780
+skinparam noteBorderColor #854F0B
+skinparam noteBackgroundColor #FAEEDA
+
+actor "Manager/Owner" as MGR #EEEDFE
+participant "UI" as UI #E6F1FB
+participant "Auth Service" as AS #FAECE7
+participant "Pricing Engine" as PE #FAEEDA
+participant "Dynamic Engine" as DE #E1F5EE
+database "Database" as DB #F1EFE8
+participant "Pricing\nPublisher" as PP #EDE3F6
+participant "Customer Pricing\nView Subscriber" as CV #E3F6E8
+
+MGR -> UI : log in, navigate to\npricing management screen
+UI -> AS : verifyPermission(managerId, lotId)
+AS -> DB : checkRoleAndScope(managerId, lotId)
+DB --> AS : authorized
+AS --> UI : access granted
+UI -> PE : fetchCurrentPricing(lotId)
+PE -> DB : getCurrentRates(lotId)
+DB --> PE : pricingData{}
+PE --> UI : return current pricing
+UI --> MGR : display current pricing\nstructure and rates
+
+MGR -> UI : selectStallType(stallType)\nenterBaseRate(rate)
+UI -> PE : validateRates(rate)
+PE --> UI : valid, return preview
+UI --> MGR : display pricing preview
+
+MGR -> UI : confirmRateUpdate()
+UI -> PE : saveBaseRates(lotId, stallType, rate)
+PE -> DB : writePricing(lotId, stallType, rate)
+DB --> PE : saved
+PE -> PP : publish(PricingUpdatedEvent)
+PE --> UI : rates saved
+UI --> MGR : display success confirmation
+
+opt enable dynamic pricing
+    MGR -> UI : enableDynamicPricing()
+    UI -> PE : requestDynamicConfig()
+    PE --> UI : return config options\n(bounds, thresholds)
+    UI --> MGR : display dynamic\npricing config options
+
+    MGR -> UI : setBoundsAndThresholds(config)\nconfirm()
+    UI -> PE : activateDynamicEngine(lotId, config)
+    PE -> DE : setThresholds(config)
+    DE --> PE : engine active
+    PE -> DB : writeDynamicConfig(lotId, config)
+    DB --> PE : saved
+    PE --> UI : dynamic pricing active
+    UI --> MGR : display active confirmation
+
+    loop while dynamic pricing is active for lotId
+        DE -> DE : evaluate current conditions\n(demand, occupancy, time)
+        DE -> PE : recalculateRate(lotId)
+        PE -> DB : writePricing(lotId, recalculatedRate)
+        DB --> PE : saved
+        PE -> PP : publish(PricingUpdatedEvent)
+    end
+end
+
+par Publisher notifies every subscriber
+  PP -> CV : notify(event)
+  CV --> CV : refresh displayed rate\nfor this location only
+end
+
+note over AS, PE
+  Expert — PE owns all rate logic and validation
+  Protected Variations — DE hidden behind PE interface
+  Data Isolation — AS enforces franchise scope per REQ-24
+  Low Coupling — UI never accesses DB directly
+  Controller — PE coordinates base rates and dynamic engine
+end note
+
+note over PE, CV
+  Observer / Publisher-Subscriber (reused from UC06, UC08)
+  Low Coupling — PE and DE know only PP, never which
+  customers are currently browsing lotId's pricing
+  High Cohesion — PE's/DE's job ends at publish(); CV
+  owns its own refresh logic
+  Isolation — PP scopes notifications to one lotId, which
+  is how REQ-24's "changes isolated to the selected
+  location" is enforced structurally, not by convention
+  REQ-24 — "immediately reflected to customers browsing"
+  is only achievable via subscription: PE/DE have no list
+  of active viewers to call directly
+end note
+@enduml

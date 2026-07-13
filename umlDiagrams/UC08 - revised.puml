@@ -1,0 +1,100 @@
+@startuml
+skinparam sequenceArrowThickness 1.5
+skinparam roundcorner 8
+skinparam participantBackgroundColor #E6F1FB
+skinparam participantBorderColor #185FA5
+skinparam sequenceLifeLineBorderColor #888780
+skinparam noteBorderColor #854F0B
+skinparam noteBackgroundColor #FAEEDA
+
+actor Customer #EEEDFE
+participant "UI" as UI #E6F1FB
+participant "Reservation Sys." as RS #E1F5EE
+participant "Pricing Engine" as PE #FAEEDA
+participant "Payment Svc." as PS #FAECE7
+database "Database" as DB #F1EFE8
+participant "Reservation\nPublisher" as RP #EDE3F6
+participant "Garage Map\nSubscriber" as GM #E3F6E8
+participant "Tow Portal\nSubscriber" as TP #F6E3E3
+participant "User Reservation\nSubscriber" as UR #E3EEF6
+
+Customer -> UI : navigate to My Reservations\nselect reservation
+UI -> RS : fetchReservation(reservationId)
+RS -> DB : query(reservationId)
+DB --> RS : reservationDetails{}
+RS --> UI : return reservation details
+UI --> Customer : display details with\nEdit and Cancel options
+
+alt edit
+    Customer -> UI : selectEdit()
+    UI --> Customer : display editable fields
+
+    Customer -> UI : submitChanges(updatedFields)
+    UI -> RS : checkAvailability(updatedFields)
+    RS -> DB : verifyStallFree(stallId, time)
+    DB --> RS : available: true
+    RS -> PE : recalculateCost(updatedFields)
+    PE --> RS : updatedCost{}
+    RS --> UI : return updated summary
+    UI --> Customer : display updated\nreservation summary
+
+    Customer -> UI : confirmChanges()
+    UI -> RS : applyEdit(reservationId, updatedFields)\n(sb.rpc "edit_future_reservation" /\n"extend_current_reservation")
+    RS -> PS : processChargeDelta()
+    PS --> RS : payment confirmed
+    RS -> DB : updateReservation()
+    DB --> RS : success
+    RS -> RP : publish(ReservationUpdatedEvent)
+    RS --> UI : edit confirmed
+    UI --> Customer : display confirmation screen
+
+else cancel
+    Customer -> UI : selectCancel()
+    UI -> RS : fetchCancellationPolicy(reservationId)
+    RS --> UI : return cancellation policy
+    UI --> Customer : display cancellation policy
+
+    Customer -> UI : confirmCancellation()
+    UI -> RS : processCancel(reservationId)\n(sb.rpc "cancel_reservation")
+    RS -> PS : processRefund()
+    PS --> RS : refund confirmed
+    RS -> DB : markCanceled(reservationId)
+    RS -> DB : releaseStall(stallId)
+    DB --> RS : success
+    RS -> RP : publish(ReservationCanceledEvent)
+    RS --> UI : cancellation confirmed
+    UI --> Customer : display confirmation screen
+end
+
+par Publisher notifies every subscriber
+  RP -> GM : notify(event)
+  GM -> DB : GarageMap.load(garageId)
+  GM --> GM : map.setData()\nre-render canvas
+else
+  RP -> TP : notify(event)
+  TP -> DB : select currently_parked\nwhere garage_id=...
+  TP --> TP : renderRows()
+else
+  RP -> UR : notify(event)
+  UR --> UR : loadUserReservations()\nrefresh "My Reservations"
+end
+
+note over RS, PS
+  Expert — RS owns all edit and cancel logic
+  Controller — RS coordinates all sub-steps
+  Low Coupling — PS isolated to payment delta and refund only
+  Protected Variations — UI unaware of payment or refund internals
+  REQ-26 — updateReservation()/releaseStall() prevent double-booking
+end note
+
+note over RS, UR
+  Observer / Publisher-Subscriber (shared with UC06)
+  Low Coupling — RS knows only RP, never GM/TP/UR directly,
+  whether the change came from an edit or a cancellation
+  High Cohesion — RS's job ends at publish(); each Subscriber
+  owns its own refresh logic (today: GM/Sim poll every 5s,
+  TP has no auto-refresh at all — this removes both gaps)
+  REQ-19, REQ-26 — every view reflects the change immediately,
+  replacing the old syncAcrossSystem() calls in both branches
+end note
+@enduml
