@@ -121,8 +121,12 @@ The simulation reads/writes three database objects:
   `open_spots`. Powers both the dropdown and the "X / Y occupied" summary.
 - **`currently_parked`** (view) — one row per car that's *currently* legally parked
   (its `parked_until` is in the future), joined to the car's make/model/colour/plate.
-- **`simulate_fill(garage_id, count, hours)`** (function) — parks random fake cars in the
-  open spots. Called with `count = null` to fill the whole lot.
+- **`simulate_fill(garage_id, count, hours, colors)`** (function) — parks random fake cars in
+  the open spots. Called with `count = null` to fill the whole lot. `colors` is the palette
+  the browser sends ([js/carColors.js](js/carColors.js)) — the *same* list the "Color"
+  dropdown on the user portal offers, so the picker decides what colours the simulation
+  produces. Leave it `null` and it uses the whole palette (`car_color_names()`); anything not
+  in the palette is silently dropped, so a bad list can never break a fill.
 
 **One important invariant:** a garage's `total_spots` must equal
 `floors × rows × slots_per_row`, because the counts/`simulate_fill` trust `total_spots`

@@ -221,6 +221,140 @@ values ('simulator', 'user')
 on conflict (username, role) do nothing;
 
 -- ---------------------------------------------------------------------
+-- Car colours  (the "Color" dropdown on user.html IS this list)
+--
+--   ONE list of colours, mirrored in js/carColors.js:
+--     * THIS FUNCTION is the database's copy. cars.color has a CHECK against it, so a car
+--       can only ever be a colour the app knows how to draw — including on the direct
+--       `insert into cars` the browser makes with the PUBLIC anon key. simulate_fill()
+--       falls back to it, so there is no second list anywhere in this file.
+--     * js/carColors.js is the browser's copy (name + hex). It builds the dropdown, paints
+--       the cars on the map, and PASSES the list to simulate_fill() as p_colors — so the
+--       dropdown literally drives the simulation.
+--   Hexes live ONLY in js/carColors.js. The database never needs to know what a colour
+--   looks like, only which names are legal.
+--
+--   Two languages means two copies, exactly like the pricing engine — so it gets the same
+--   treatment as price_selftest(): the browser calls this function on every page load
+--   (CarColors.verifyAgainstDb) and console.errors if the two lists disagree, and
+--   color_selftest() below checks the database's own half from the SQL editor.
+--
+--   Values are Title Case because every screen prints cars.color VERBATIM in front of the
+--   make and model ("Navy Toyota Corolla") — js/user.js, js/tow.js, and the map's tooltip
+--   and screen-reader list. The browser lower-cases it for hex/sprite lookups. Keep names
+--   SINGLE-WORD: they double as sprite filenames (assets/cars/navy-normal.png), and
+--   color_selftest() enforces it.
+--
+--   TO ADD A COLOUR: add it below AND to PALETTE in js/carColors.js, then re-run this
+--   file. Miss either half and the browser console says so on the next page load.
+--
+--   NOTE: bare "create or replace", with NO "drop function" before it — unlike every other
+--   function in this file. The CHECK constraint below DEPENDS on this function, so a drop
+--   would fail (2BP01) on any re-run. "create or replace" is safe forever here because the
+--   signature () -> text[] never changes; only the list inside does. If you ever must
+--   change the signature, drop cars_color_check first.
+-- ---------------------------------------------------------------------
+create or replace function car_color_names()
+returns text[]
+language sql
+immutable
+set search_path = public
+as $$
+  select array[
+    'Black', 'White', 'Silver', 'Gray', 'Red', 'Maroon', 'Orange',
+    'Yellow', 'Gold', 'Green', 'Blue', 'Navy', 'Brown'
+  ]::text[];
+$$;
+
+-- cars.color was FREE TEXT until now, so a database that has been used holds values the
+-- palette has never heard of ('blue', 'grey', 'Dark Blue', 'teal', ''). The CHECK below
+-- VALIDATES EVERY EXISTING ROW when it is added, and this file runs as ONE transaction —
+-- so a single stray value would abort the whole thing and apply nothing. Rewrite them first:
+--     case / whitespace only   ' bLuE '     -> 'Blue'
+--     a spelling we recognise  'grey'       -> 'Gray'
+--     a palette name inside    'Dark Blue'  -> 'Blue'
+--     anything else            'teal', ''   -> 'Gray'
+-- 'Gray' is the catch-all because it is what the map ALREADY drew for an unknown colour (it
+-- fell through to the neutral grey block), so the picture doesn't change — only the label.
+-- Yes, this overwrites colours real users typed in; that is accepted, because the column is
+-- a closed set from now on and there is no car-edit screen anywhere in the app.
+-- Re-running is a no-op: after one pass every row is in the palette, so the WHERE matches
+-- nothing. (cars.color is NOT NULL, so there is no NULL case to handle.)
+update cars c
+   set color = coalesce(
+         -- 1. same colour, different case/spacing
+         (select p.name from unnest(car_color_names()) as p(name)
+           where lower(p.name) = lower(btrim(c.color))),
+         -- 2. a spelling we know. One-shot migration table — NOT a palette artifact, and
+         --    deliberately the only place aliases exist (the browser has none: once the
+         --    CHECK lands, none of these can ever be stored again, so a JS alias map would
+         --    be dead code).
+         (select a.name from (values
+             ('grey','Gray'),      ('charcoal','Black'), ('graphite','Gray'),
+             ('burgundy','Maroon'),('crimson','Red'),    ('tan','Brown'),
+             ('beige','Brown'),    ('cream','White'),    ('champagne','Gold'),
+             ('purple','Navy'),    ('teal','Green')
+           ) as a(raw, name) where a.raw = lower(btrim(c.color))),
+         -- 3. a palette name hiding inside a longer string ('Metallic Silver')
+         (select p.name from unnest(car_color_names()) as p(name)
+           where lower(btrim(c.color)) like '%' || lower(p.name) || '%'
+           order by length(p.name) desc
+           limit 1),
+         -- 4. give up
+         'Gray')
+ where not (c.color = any (car_color_names()));
+
+-- A car can now ONLY be a palette colour. Drop-then-add is the idempotent way to change a
+-- constraint in a file that is replayed (same idiom as reservations_rates_check above), and
+-- re-adding it is also what RE-VALIDATES every row against the palette as it stands today.
+-- The comparison is case-SENSITIVE: 'Navy' is legal, 'navy' is not. On purpose — the stored
+-- string is printed verbatim on screen.
+alter table cars drop constraint if exists cars_color_check;
+alter table cars add  constraint cars_color_check
+  check (color = any (car_color_names()));
+
+-- The colour palette's answer to price_selftest(). Run it in the SQL editor:
+--   select * from color_selftest();     -- every row must be ok = true
+-- (The JS half is checked automatically on every page load — see CarColors.verifyAgainstDb().)
+drop function if exists color_selftest();
+create function color_selftest()
+returns table (check_name text, ok boolean, detail text)
+language sql
+stable
+set search_path = public
+as $$
+  select 'palette is non-empty'::text,
+         coalesce(array_length(car_color_names(), 1), 0) > 0,
+         (coalesce(array_length(car_color_names(), 1), 0)::text || ' colour(s)')::text
+  union all
+  -- Single-word Title Case is what makes lower(name) a safe slug for the hex map and for
+  -- assets/cars/<slug>-<size>.png. Break it and the map just paints neutral grey with no
+  -- other symptom — so it is a hard failure here instead.
+  select 'names are single-word Title Case'::text,
+         count(*) filter (where n !~ '^[A-Z][a-z]+$') = 0,
+         ('offenders: ' || coalesce(string_agg(n, ', ') filter (where n !~ '^[A-Z][a-z]+$'),
+                                    'none'))::text
+    from unnest(car_color_names()) as t(n)
+  union all
+  select 'names are unique'::text,
+         count(distinct n) = count(*),
+         (count(*)::text || ' entries, ' || count(distinct n)::text || ' distinct')::text
+    from unnest(car_color_names()) as t(n)
+  union all
+  select 'every cars.color is in the palette'::text,
+         count(*) filter (where not (color = any (car_color_names()))) = 0,
+         (count(*) filter (where not (color = any (car_color_names())))::text
+           || ' off-palette car row(s)')::text
+    from cars
+  union all
+  select 'cars.color CHECK is installed'::text,
+         exists (select 1 from pg_constraint
+                  where conrelid = 'public.cars'::regclass
+                    and conname  = 'cars_color_check'),
+         'cars_color_check -> car_color_names()'::text;
+$$;
+
+-- ---------------------------------------------------------------------
 -- Pricing engine  (UC06 calculateCost / UC13 base rates)
 --
 -- THE FORMULA — mirrored line-for-line in js/price.js. If you change one,
@@ -500,10 +634,32 @@ $$;
 
 -- Fill up to p_count open spots (or ALL remaining if null) with random
 -- fake cars under the simulator account. Returns how many it parked.
-create or replace function simulate_fill(
+--
+-- p_colors is the palette the browser is showing in its "Color" dropdown (js/carColors.js ->
+-- CarColors.names()), so the picker literally drives the simulation.
+-- It is SANITISED, NOT TRUSTED: the anon key is public (it is printed in js/config.js), so
+-- anything at all can arrive here. Every element is matched case-insensitively against
+-- car_color_names() and the CANONICAL name is taken; anything else is dropped; null, '{}',
+-- '{NULL}' and a list of pure junk ALL fall back to the full palette. This function can
+-- therefore never insert a colour cars_color_check would reject, and no caller can make it
+-- throw by sending a bad array — it always fails OPEN (a normal, full-palette fill).
+--
+-- p_colors has a DEFAULT on purpose: a browser still running the pre-palette JS calls this
+-- with only {p_garage_id, p_count, p_hours} and must keep working.
+--
+-- NOTE THE TWO DROPS. This function GAINED a parameter, and "create or replace" cannot add
+-- one — it would leave the 3-argument version in place as a SECOND OVERLOAD, and PostgREST
+-- would answer every simulate_fill call with PGRST203 instead of parking a car. (Same trap
+-- the calculate_price_rates comment above describes.) The drop also removes the old
+-- function's GRANT, which is why the grant at the bottom of this file now names the 4-arg
+-- signature — leave the old grant there and this whole file fails with 42883.
+drop function if exists simulate_fill(bigint, integer, numeric);
+drop function if exists simulate_fill(bigint, integer, numeric, text[]);
+create function simulate_fill(
   p_garage_id bigint,
   p_count     integer default null,
-  p_hours     numeric default 2
+  p_hours     numeric default 2,
+  p_colors    text[]  default null
 )
 returns integer
 language plpgsql
@@ -525,10 +681,25 @@ declare
   v_price   numeric;
   makes  text[] := array['Toyota','Honda','Ford','Tesla','BMW','Kia','Mazda','Subaru','Nissan','Jeep'];
   models text[] := array['Sedan','Coupe','SUV','Hatchback','Truck','Van','Wagon'];
-  colors text[] := array['Black','White','Red','Blue','Silver','Green','Gray'];
+  colors text[];   -- was a hard-coded array; now the caller's palette, sanitised (below)
   sizes  text[] := array['compact','normal','large'];
   ltrs   text   := 'ABCDEFGHJKLMNPRSTUVWXYZ';
 begin
+  -- Whitelist p_colors against the palette. The join IS the guard:
+  --   null / '{}'    -> 0 rows                                -> full palette
+  --   '{NULL}'       -> lower(btrim(null)) is null, no match  -> dropped
+  --   '{Chartreuse}' -> no match -> 0 rows                    -> full palette (never an error)
+  --   '{blue}'       -> matches and yields the CANONICAL 'Blue'
+  --   duplicates     -> collapsed by distinct
+  select coalesce(array_agg(distinct p.name), '{}'::text[])
+    into colors
+    from unnest(coalesce(p_colors, '{}'::text[])) as req(raw)
+    join unnest(car_color_names()) as p(name) on lower(p.name) = lower(btrim(req.raw));
+
+  if coalesce(array_length(colors, 1), 0) = 0 then
+    colors := car_color_names();
+  end if;
+
   select total_spots, first_hour_rate, hourly_rate, daily_cap
     into v_total, v_first, v_hourly, v_cap
   from garages where id = p_garage_id for update;
@@ -1040,8 +1211,13 @@ grant select on garage_availability, currently_parked to anon, authenticated;
 grant execute on function calculate_price_rates(numeric, numeric, numeric, integer) to anon, authenticated;
 grant execute on function calculate_price(bigint, numeric)         to anon, authenticated;
 grant execute on function price_selftest()                         to anon, authenticated;
+grant execute on function car_color_names()                        to anon, authenticated;
+grant execute on function color_selftest()                         to anon, authenticated;
 grant execute on function park_car(bigint, bigint, numeric)        to anon, authenticated;
-grant execute on function simulate_fill(bigint, integer, numeric)  to anon, authenticated;
+-- 4 args now, not 3: simulate_fill gained p_colors and the OLD signature was dropped above.
+-- A grant naming the old (bigint, integer, numeric) signature fails with 42883 and — because
+-- this file is one transaction — rolls back the entire migration.
+grant execute on function simulate_fill(bigint, integer, numeric, text[]) to anon, authenticated;
 grant execute on function reserve_car(bigint, bigint, timestamptz, numeric) to anon, authenticated;
 grant execute on function cancel_reservation(bigint) to anon, authenticated;
 grant execute on function extend_current_reservation(bigint, numeric) to anon, authenticated;
