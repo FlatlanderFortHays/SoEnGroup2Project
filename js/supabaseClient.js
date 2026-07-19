@@ -195,7 +195,6 @@ function initPortal(role, onReady) {
     whoami.classList.remove("hidden");
     whoamiName.textContent = `${session.username} (${session.role})`;
     onReady(session);
-    initSupportForm(session);   // no-op on pages without the #support-* markup
   }
 
   document.getElementById("logout").addEventListener("click", () => {
