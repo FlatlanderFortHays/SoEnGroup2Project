@@ -1253,4 +1253,31 @@ grant execute on function login(text, text, text)  to anon, authenticated;
 revoke all on table accounts from anon, authenticated;
 
 -- Hard clear cache to initialize endpoints immediately
+-- ===========================
+-- Support Tickets
+-- ===========================
+create table if not exists support_tickets (
+    id bigint generated always as identity primary key,
+    user_id bigint not null references accounts(id) on delete cascade,
+    subject text not null,
+    message text not null,
+    status text default 'Open',
+    created_at timestamptz default now()
+);
+
+grant all on support_tickets to anon, authenticated;
+
+-- ===========================
+-- Garage Reviews
+-- ===========================
+create table if not exists garage_reviews (
+    id bigint generated always as identity primary key,
+    garage_id bigint not null references garages(id) on delete cascade,
+    user_id bigint not null references accounts(id) on delete cascade,
+    rating integer not null check (rating between 0 and 5),
+    review text,
+    created_at timestamptz default now()
+);
+
+grant all on garage_reviews to anon, authenticated;
 NOTIFY pgrst, 'reload schema';
