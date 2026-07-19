@@ -98,6 +98,41 @@
         <p id="manage-msg" class="msg"></p>
         <ul id="my-reservations-list" class="list"></ul>
       </div>
+      <div class="card" style="margin-top:20px;">
+  <h2>⭐ Leave a Review</h2>
+
+  <label for="review-garage">Garage</label>
+  <select id="review-garage"></select>
+
+  <label for="review-rating" style="margin-top:10px;">Rating</label>
+  <select id="review-rating">
+    <option value="0">0 Stars</option>
+    <option value="1">1 Star</option>
+    <option value="2">2 Stars</option>
+    <option value="3">3 Stars</option>
+    <option value="4">4 Stars</option>
+    <option value="5">5 Stars</option>
+  </select>
+
+  <label for="review-message" style="margin-top:10px;">
+    Review
+  </label>
+
+  <textarea
+      id="review-message"
+      rows="4"
+      placeholder="Write a short review..."></textarea>
+
+  <button
+      id="review-submit"
+      class="btn"
+      type="button"
+      style="margin-top:15px;">
+      Submit Review
+  </button>
+
+  <p id="review-msg" class="msg"></p>
+      </div>
     </section>
   </main>
 
