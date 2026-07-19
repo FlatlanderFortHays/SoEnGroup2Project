@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Park Now — Dev Console</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    /* Page-local styling for the dev console (kept out of the shared stylesheet). */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+    }
+    .stat-tile {
+      background: var(--card, #fff);
+      border: 1px solid var(--line, #ddd);
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+    }
+    .stat-value { display: block; font-size: 1.6rem; font-weight: 700; }
+    .stat-label { display: block; font-size: 0.78rem; color: var(--muted, #667); margin-top: 4px; }
+
+    .ticket {
+      border: 1px solid var(--line, #ddd);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .ticket-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .ticket-meta { font-size: 0.78rem; color: var(--muted, #667); }
+    .ticket-body { margin: 8px 0 0; white-space: pre-wrap; }
+
+    .selftest-row { font-family: ui-monospace, "Cascadia Code", Menlo, Consolas, monospace; font-size: 0.85rem; }
+    .ok  { color: #16a34a; }
+    .bad { color: #dc2626; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">🅿️ Park Now</a>
+    <div id="whoami" class="whoami hidden">
+      <span id="whoami-name"></span>
+      <button id="logout" class="btn-link">Log out</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Login (dev accounts only; there is deliberately no link to this page) -->
+    <section id="login" class="card">
+      <h2>🛠️ Dev Console</h2>
+      <p class="hint">Restricted area — sign in with a dev account.</p>
+      <form id="login-form" class="row">
+        <label>Username
+          <input id="login-username" placeholder="Your username" autocomplete="off" />
+        </label>
+        <label>Password
+          <input id="login-password" type="password" placeholder="Your password" autocomplete="off" />
+        </label>
+        <button class="btn" type="submit">Continue</button>
+      </form>
+      <p id="login-error" class="error"></p>
+
+      <details style="margin-top: 1rem;">
+        <summary class="hint" style="cursor: pointer;">First time? Create a dev account</summary>
+        <div class="row" style="margin-top: 0.75rem;">
+          <label>New username
+            <input id="dev-new-username" placeholder="Pick a username" autocomplete="off" />
+          </label>
+          <label>New password
+            <input id="dev-new-password" type="password" placeholder="Min 4 characters" autocomplete="off" />
+          </label>
+          <button class="btn btn-ghost" type="button" id="dev-create">Create dev account</button>
+        </div>
+        <p id="dev-create-msg" class="msg"></p>
+      </details>
+    </section>
+
+    <!-- Console -->
+    <section id="app" class="hidden">
+      <!-- Site overview -->
+      <div class="card">
+        <div class="row" style="justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0;">📊 Site Overview</h2>
+          <button id="stats-refresh" class="btn btn-ghost" type="button">Refresh</button>
+        </div>
+        <div id="dev-stats" style="margin-top: 12px;"></div>
+      </div>
+
+      <!-- Support tickets -->
+      <div class="card" style="margin-top: 2rem;">
+        <div class="row" style="justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0;">🎫 Support Tickets</h2>
+          <button id="tickets-refresh" class="btn btn-ghost" type="button">Refresh</button>
+        </div>
+        <p id="tickets-msg" class="msg"></p>
+        <div id="dev-tickets" style="margin-top: 8px;"></div>
+      </div>
+
+      <!-- Simulations -->
+      <div class="card" style="margin-top: 2rem;">
+        <h2>🧪 Simulations</h2>
+        <p class="hint">Fill a garage with simulated cars (for demos and testing).</p>
+        <div class="row">
+          <label>Garage
+            <select id="sim-garage"></select>
+          </label>
+          <label>Cars (blank = fill all)
+            <input id="sim-count" type="number" min="1" step="1" placeholder="all" />
+          </label>
+          <label>Hours
+            <input id="sim-hours" type="number" min="0.5" step="0.5" value="2" />
+          </label>
+          <button id="sim-run" class="btn" type="button">Simulate</button>
+        </div>
+        <p id="sim-msg" class="msg"></p>
+      </div>
+
+      <!-- Self-tests -->
+      <div class="card" style="margin-top: 2rem;">
+        <h2>✅ Self-tests</h2>
+        <p class="hint">Verify the pricing and colour engines still match the database.</p>
+        <div class="row">
+          <button id="selftest-price" class="btn btn-ghost" type="button">Run pricing self-test</button>
+          <button id="selftest-color" class="btn btn-ghost" type="button">Run colour self-test</button>
+        </div>
+        <div id="selftest-out" style="margin-top: 10px;"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/carColors.js"></script>
+  <script src="js/dev.js"></script>
+</body>
+</html>
