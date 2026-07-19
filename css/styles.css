@@ -19,6 +19,7 @@
   --full-bg: #fef3c7;
   --radius: 14px;
   --shadow: 0 10px 30px rgba(2, 6, 23, 0.12);
+  --content-width: 920px;
 }
 
 * { box-sizing: border-box; }
@@ -31,7 +32,7 @@ body {
   min-height: 100vh;
 }
 
-.container { max-width: 920px; margin: 0 auto; padding: 24px; }
+.container { max-width: var(--content-width); margin: 0 auto; padding: 24px; }
 .hidden { display: none !important; }
 .muted { color: var(--muted); }
 .mono { font-family: ui-monospace, "Cascadia Code", Menlo, Consolas, monospace; }
@@ -100,7 +101,7 @@ body {
 .row > label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--muted); }
 
 /* ---------- Forms ---------- */
-input, select {
+input, select, textarea {
   font: inherit;
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -109,7 +110,8 @@ input, select {
   color: var(--ink);
   min-width: 0;
 }
-input:focus, select:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
+textarea { resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); border-color: var(--brand); }
 
 .btn {
   font: inherit;
@@ -318,4 +320,44 @@ th { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-s
     touch-action: pan-x;          /* swipe through floors without hijacking the map */
   }
   .floor-slab { flex: 0 0 auto; width: 88px; }   /* compact, fixed-width slabs */
+}
+
+/* =====================================================================
+   Desktop side decoration — an aerial parking-lot photo (parking_lot.jpg)
+   filling the empty left/right margins. The width is fluid (calc off the
+   real margin), so the panels shrink as the window narrows; the inner edge
+   is masked to a soft fade, which also makes thin slivers vanish on their
+   own. Hidden outright on phones — this only fills desktop edge space and
+   never affects layout.
+   ===================================================================== */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: calc((100vw - var(--content-width)) / 2);  /* one empty margin */
+  z-index: -1;                 /* behind header + content, above body gradient */
+  pointer-events: none;
+  /* Aerial parking-lot photo, scaled to cover each side panel. */
+  background: url("../parking_lot.jpg") center center / cover no-repeat;
+}
+/* Each panel sits at its viewport edge; the inner edge fades into the page. */
+body::before {
+  left: 0;
+  background-position: left center;   /* show the left slice of the photo */
+  -webkit-mask-image: linear-gradient(to left, transparent 0, #000 64px);
+          mask-image: linear-gradient(to left, transparent 0, #000 64px);
+}
+body::after {
+  right: 0;
+  background-position: right center;   /* show the right slice of the photo */
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 64px);
+          mask-image: linear-gradient(to right, transparent 0, #000 64px);
+}
+
+/* Phones: no room for edge decoration — remove it entirely. */
+@media (max-width: 768px) {
+  body::before,
+  body::after { display: none; }
 }
