@@ -595,6 +595,46 @@ initPortal("user", (session) => {
   // The Color dropdown IS the palette (js/carColors.js) — the same list the map paints from
   // and the same list we hand to simulate_fill().
   CarColors.fillSelect(carColorSelect);
+  // ---------------- Contact Support ----------------
+
+const supportSubject = document.getElementById("support-subject");
+const supportMessage = document.getElementById("support-message");
+const supportButton  = document.getElementById("support-submit");
+const supportMsg     = document.getElementById("support-msg");
+
+if (supportButton) {
+  supportButton.addEventListener("click", async () => {
+
+    supportMsg.textContent = "";
+
+    const subject = supportSubject.value.trim();
+    const message = supportMessage.value.trim();
+
+    if (!subject || !message) {
+      supportMsg.textContent = "Please complete all fields.";
+      return;
+    }
+
+    const { error } = await sb
+      .from("support_tickets")
+      .insert({
+        user_id: session.id,
+        subject,
+        message
+      });
+
+    if (error) {
+      supportMsg.textContent = error.message;
+      return;
+    }
+
+    supportSubject.value = "";
+    supportMessage.value = "";
+
+    supportMsg.textContent =
+      "Support request submitted successfully.";
+  });
+}
 
   loadCars();
   loadGarages();
