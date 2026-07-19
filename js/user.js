@@ -633,6 +633,9 @@ if (supportButton) {
 
     supportMsg.textContent =
       "Support request submitted successfully.";
+  });
+}
+
   // ---------------- Review System ----------------
 
 const reviewGarage = document.getElementById("review-garage");
