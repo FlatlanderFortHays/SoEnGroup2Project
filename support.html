@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Park Now — Contact Support</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">🅿️ Park Now</a>
+    <div id="whoami" class="whoami">
+      <a class="btn-link" id="back-link" href="user.html">← Back to portal</a>
+      <span id="whoami-name"></span>
+      <button id="logout" class="btn-link">Log out</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <h2>📨 Contact Support</h2>
+      <p class="hint">Your ticket is sent from your logged-in account — our team will follow up.</p>
+
+      <label for="support-subject">Subject</label>
+      <input id="support-subject" type="text" placeholder="Brief summary" autocomplete="off" />
+
+      <label for="support-message" style="margin-top: 10px;">Message</label>
+      <textarea id="support-message" rows="4" placeholder="Describe your issue…"></textarea>
+
+      <button id="support-submit" class="btn" type="button" style="margin-top: 15px;">Submit ticket</button>
+      <p id="support-msg" class="msg"></p>
+    </div>
+
+    <div class="card" style="margin-top: 2rem;">
+      <h2>Your tickets</h2>
+      <ul id="support-list" class="list"></ul>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/support.js"></script>
+</body>
+</html>
