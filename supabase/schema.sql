@@ -38,7 +38,7 @@ create extension if not exists pgcrypto;
 create table if not exists accounts (
   id          bigint generated always as identity primary key,
   username    text not null,
-  role        text not null check (role in ('user', 'owner', 'tow')),
+  role        text not null check (role in ('user', 'owner', 'tow', 'dev')),
   created_at  timestamptz not null default now(),
   unique (username, role)
 );
@@ -47,6 +47,13 @@ create table if not exists accounts (
 -- Deliberately NULLable: the seeded 'simulator' account never logs in, so it
 -- legitimately has no password.
 alter table accounts add column if not exists password_hash text;
+
+-- Allow the hidden 'dev' admin role (see dev.html). The create-table CHECK above only
+-- applies on first install, so re-add the constraint here so databases created before
+-- 'dev' existed accept it too. Idempotent.
+alter table accounts drop constraint if exists accounts_role_check;
+alter table accounts add  constraint accounts_role_check
+  check (role in ('user', 'owner', 'tow', 'dev'));
 
 -- A parking garage created by an owner.
 --   Layout: `floors` levels, each with `rows` aisles (lettered A, B, C…) of
@@ -1100,7 +1107,7 @@ begin
     -- crypt('', hash) later matches — so an empty password would "work".
     raise exception 'Password must be at least 4 characters.';
   end if;
-  if p_role is null or p_role not in ('user', 'owner', 'tow') then
+  if p_role is null or p_role not in ('user', 'owner', 'tow', 'dev') then
     raise exception 'Unknown role.';
   end if;
 
@@ -1259,11 +1266,25 @@ revoke all on table accounts from anon, authenticated;
 create table if not exists support_tickets (
     id bigint generated always as identity primary key,
     user_id bigint not null references accounts(id) on delete cascade,
+    role text,
+    username text,
     subject text not null,
     message text not null,
     status text default 'Open',
     created_at timestamptz default now()
 );
+
+-- Denormalize the sender onto the ticket. accounts is locked from the browser (see the
+-- lockdown above), so the dev console can't join it — store which portal filed the ticket
+-- and the username at insert time. Idempotent for databases created before these columns.
+alter table support_tickets add column if not exists role     text;
+alter table support_tickets add column if not exists username text;
+
+-- Ticket lifecycle the dev console cycles through; named so it can be widened on a re-run.
+-- Matches the default 'Open'.
+alter table support_tickets drop constraint if exists support_tickets_status_check;
+alter table support_tickets add  constraint support_tickets_status_check
+  check (status in ('Open', 'In Progress', 'Resolved', 'Closed'));
 
 grant all on support_tickets to anon, authenticated;
 
@@ -1296,5 +1317,51 @@ drop policy if exists "mvp all access" on garage_reviews;
 
 create policy "mvp all access" on support_tickets for all using (true) with check (true);
 create policy "mvp all access" on garage_reviews  for all using (true) with check (true);
+
+-- ---------------------------------------------------------------------
+-- dev_stats(): site-wide aggregates for the hidden dev console (dev.html).
+--   SECURITY DEFINER because `accounts` is revoked from anon (see the lockdown
+--   above) — this runs as the owner so it can count users by role. Returns one
+--   JSON blob so the console fetches the whole overview in a single round trip.
+--   Granted to anon like signup()/login() — same MVP honor-system posture.
+-- ---------------------------------------------------------------------
+drop function if exists dev_stats();
+create function dev_stats()
+returns jsonb
+language sql
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'accounts', (
+      select coalesce(jsonb_object_agg(role, n), '{}'::jsonb)
+      from (
+        select role, count(*) as n
+        from accounts
+        where not (username = 'simulator' and role = 'user')   -- hide the seeded sim account
+        group by role
+      ) a
+    ),
+    'garages',     (select count(*) from garages),
+    'total_spots', (select coalesce(sum(total_spots), 0) from garages),
+    'cars',        (select count(*) from cars),
+    'reservations', jsonb_build_object(
+      'active',   (select count(*) from reservations where parked_at <= now() and parked_until >= now()),
+      'upcoming', (select count(*) from reservations where parked_at > now()),
+      'past',     (select count(*) from reservations where parked_until < now()),
+      'total',    (select count(*) from reservations)
+    ),
+    'tickets', (
+      select coalesce(jsonb_object_agg(status, n), '{}'::jsonb)
+      from (select status, count(*) as n from support_tickets group by status) t
+    ),
+    'reviews', jsonb_build_object(
+      'count',      (select count(*) from garage_reviews),
+      'avg_rating', (select round(avg(rating)::numeric, 2) from garage_reviews)
+    )
+  );
+$$;
+
+grant execute on function dev_stats() to anon, authenticated;
 
 NOTIFY pgrst, 'reload schema';
