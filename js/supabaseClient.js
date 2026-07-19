@@ -101,6 +101,38 @@ function initSupportForm(session) {
   const subject = document.getElementById("support-subject");
   const message = document.getElementById("support-message");
   const msg     = document.getElementById("support-msg");
+  const list    = document.getElementById("support-list");   // optional "your tickets" list
+
+  // Render this account's own tickets (with live status) when the page includes the
+  // list. RLS is permissive, so filter to this account on the client — same pattern as
+  // the reservations list in js/user.js. The dev console (dev.html) is where status is set.
+  async function loadMyTickets() {
+    if (!list) return;
+    const { data, error } = await sb
+      .from("support_tickets")
+      .select("id, subject, status, created_at")
+      .eq("user_id", session.id)
+      .order("created_at", { ascending: false });
+    if (error) {
+      list.innerHTML = `<li class="error">${escapeHtml(error.message)}</li>`;
+      return;
+    }
+    if (!data.length) {
+      list.innerHTML = `<li class="muted">You haven't filed any tickets yet.</li>`;
+      return;
+    }
+    list.innerHTML = data.map((t) => {
+      const when = t.created_at ? new Date(t.created_at).toLocaleString() : "";
+      return `
+        <li class="list-row">
+          <span class="grow">
+            <strong>${escapeHtml(t.subject)}</strong>
+            <br /><span class="muted">${escapeHtml(when)}</span>
+          </span>
+          <span class="badge">${escapeHtml(t.status || "Open")}</span>
+        </li>`;
+    }).join("");
+  }
 
   submit.addEventListener("click", async () => {
     msg.className = "msg";
@@ -131,10 +163,13 @@ function initSupportForm(session) {
       message.value = "";
       msg.className = "msg success";
       msg.textContent = "✅ Support request submitted — our team will follow up.";
+      loadMyTickets();   // show the ticket that was just filed
     } finally {
       submit.disabled = false;
     }
   });
+
+  loadMyTickets();   // initial render
 }
 
 // Wire up the login form / logout / who-am-i bar that every portal shares,
