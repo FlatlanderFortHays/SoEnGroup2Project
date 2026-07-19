@@ -1280,4 +1280,21 @@ create table if not exists garage_reviews (
 );
 
 grant all on garage_reviews to anon, authenticated;
+
+-- RLS for the two tables the merge added (support_tickets, garage_reviews).
+-- Every other table is locked with `enable row level security` PLUS a policy (see the
+-- "mvp all access" block far above); these two were GRANTed but never had RLS enabled,
+-- so RLS was silently OFF and Supabase flags them as "RLS disabled in public". Enable
+-- it and attach the same permissive MVP policy: the app keeps working and these tables
+-- now match the rest of the schema instead of being the one wide-open exception.
+-- (Still permissive for the class demo, like garages/cars/reservations — tighten before going public.)
+alter table support_tickets enable row level security;
+alter table garage_reviews  enable row level security;
+
+drop policy if exists "mvp all access" on support_tickets;
+drop policy if exists "mvp all access" on garage_reviews;
+
+create policy "mvp all access" on support_tickets for all using (true) with check (true);
+create policy "mvp all access" on garage_reviews  for all using (true) with check (true);
+
 NOTIFY pgrst, 'reload schema';
