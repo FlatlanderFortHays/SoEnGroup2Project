@@ -595,6 +595,57 @@ initPortal("user", (session) => {
   // The Color dropdown IS the palette (js/carColors.js) — the same list the map paints from
   // and the same list we hand to simulate_fill().
   CarColors.fillSelect(carColorSelect);
+  // ---------------- Review System ----------------
+
+const reviewGarage = document.getElementById("review-garage");
+const reviewRating = document.getElementById("review-rating");
+const reviewMessage = document.getElementById("review-message");
+const reviewSubmit = document.getElementById("review-submit");
+const reviewMsg = document.getElementById("review-msg");
+
+// Load garages into the dropdown
+(async () => {
+  const { data } = await sb
+    .from("garages")
+    .select("id,name")
+    .order("name");
+
+  if (data && reviewGarage) {
+    data.forEach(g => {
+      const option = document.createElement("option");
+      option.value = g.id;
+      option.textContent = g.name;
+      reviewGarage.appendChild(option);
+    });
+  }
+})();
+
+if (reviewSubmit) {
+  reviewSubmit.addEventListener("click", async () => {
+
+    reviewMsg.textContent = "";
+
+    const { error } = await sb
+      .from("garage_reviews")
+      .insert({
+        garage_id: Number(reviewGarage.value),
+        user_id: session.id,
+        rating: Number(reviewRating.value),
+        review: reviewMessage.value.trim()
+      });
+
+    if (error) {
+      reviewMsg.textContent = error.message;
+      return;
+    }
+
+    reviewMessage.value = "";
+    reviewRating.value = "5";
+
+    reviewMsg.textContent =
+      "Review submitted successfully.";
+  });
+}
 
   loadCars();
   loadGarages();
