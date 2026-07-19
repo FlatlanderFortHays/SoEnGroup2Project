@@ -43,6 +43,10 @@ initPortal("user", (session) => {
   // submitted twice. Hold off re-rendering while a booking is in flight.
   let bookingInFlight = false;
 
+  // Per-garage average rating (from the garage_ratings view), cached so renderGarages
+  // can paint stars without a network hit on every keystroke.
+  let garageRatings = {};
+
   // Initialize input parameters with current local calendar constraints
   if (parkStartTimeInput) {
     const now = new Date();
@@ -238,6 +242,11 @@ initPortal("user", (session) => {
     garages = data;
     garagesState = "ready";
 
+    // Per-garage average rating for the row display (separate view; permissive read).
+    const { data: ratingRows } = await sb.from("garage_ratings").select("*");
+    garageRatings = {};
+    (ratingRows || []).forEach((row) => { garageRatings[row.garage_id] = row; });
+
     // If the selected garage vanished (deleted, renamed away), drop the selection.
     if (selectedGarageId != null && !garages.some((g) => g.id === selectedGarageId)) {
       selectedGarageId = null;
@@ -253,6 +262,15 @@ initPortal("user", (session) => {
 
     renderGarages();
     updateCostEstimate(readHours());   // rates only just arrived; price the banner now
+  }
+
+  // "★★★★☆ 4.2 (5)" or "☆☆☆☆☆ Unrated" for a garage, from the cached garage_ratings.
+  function ratingLabel(garageId) {
+    const r = garageRatings[garageId];
+    if (!r || !r.review_count) return "☆☆☆☆☆ Unrated";
+    const full = Math.max(0, Math.min(5, Math.round(Number(r.avg_rating) || 0)));
+    const stars = "★★★★★".slice(0, full) + "☆☆☆☆☆".slice(0, 5 - full);
+    return `${stars} ${r.avg_rating} (${r.review_count})`;
   }
 
   function renderGarages() {
@@ -281,11 +299,11 @@ initPortal("user", (session) => {
           <span class="grow">
             <strong>${escapeHtml(g.name)}</strong>
             <br /><span class="muted">${escapeHtml(Pricing.rateCard(g))}</span>
+            <br /><span class="muted">${ratingLabel(g.id)}</span>
           </span>
           ${priceBadge}
           <span class="badge ${full && !isFutureMode ? "badge-full" : ""}">${g.open_spots}/${g.total_spots} open now</span>
           <button class="btn" data-park="${g.id}">Book spot</button>
-          <button class="btn btn-ghost" data-sim="${g.id}" title="Demo: instantly fill the lot">Simulate full lot</button>
         </li>`;
     }).join("");
   }
@@ -296,11 +314,10 @@ initPortal("user", (session) => {
 
   garageList.addEventListener("click", async (event) => {
     const parkId = event.target.getAttribute("data-park");
-    const simId  = event.target.getAttribute("data-sim");
 
-    // Clicking the row itself (not one of its buttons) selects that garage, which
+    // Clicking the row itself (not the Book button) selects that garage, which
     // prices the banner above for it.
-    if (!parkId && !simId) {
+    if (!parkId) {
       const row = event.target.closest(".garage-row");
       if (!row) return;
       const id = Number(row.dataset.garage);
@@ -381,18 +398,6 @@ initPortal("user", (session) => {
             parkMsg(`📅 Success! Spot #${displaySpot} is reserved for you from ${displayStart} until ${displayEnd}${cost}`, false);
           }
         }
-      } else {
-        // Simulation triggers.
-        // p_colors (inside the helper) is the exact list the Color dropdown above offers, so
-        // the cars the simulation invents and the cars a user can register are one palette.
-        // count: null = fill ALL remaining spots (same call as js/simulation.js).
-        const { data, error } = await CarColors.simulateFill(sb, {
-          garageId: simId,
-          count: null,
-          hours,
-        });
-        if (error) parkMsg(error.message, true);
-        else       parkMsg(`🧪 Simulated ${data} car(s) parking for ${hours}h.`, false);
       }
     } finally {
       event.target.disabled = false;
@@ -440,6 +445,15 @@ initPortal("user", (session) => {
       return;
     }
 
+    // Which of these stays the user has already rated (per reservation), so a Past Stay
+    // shows "Rated" instead of the rate link. Filtered to this account.
+    const { data: myReviews } = await sb
+      .from("garage_reviews")
+      .select("reservation_id, rating")
+      .eq("user_id", session.id);
+    const ratedByRes = {};
+    (myReviews || []).forEach((rv) => { if (rv.reservation_id != null) ratedByRes[rv.reservation_id] = rv.rating; });
+
     const now = new Date();
 
     myReservationsList.innerHTML = validReservations.map((r) => {
@@ -456,7 +470,9 @@ initPortal("user", (session) => {
 
       if (isPast) {
         statusBadge = `<span class="badge muted">Past Stay</span>`;
-        actionControls = `<span class="muted">None</span>`;
+        actionControls = ratedByRes[r.id] != null
+          ? `<span class="muted">✓ Rated (${ratedByRes[r.id]}★)</span> <a class="btn btn-ghost" href="rate.html?role=user&reservation=${r.id}">Edit rating</a>`
+          : `<a class="btn" href="rate.html?role=user&reservation=${r.id}">⭐ Rate your stay</a>`;
       } else if (isActiveNow) {
         statusBadge = `<span class="badge badge-full" style="background:#0088cc; color:#fff;">Active Now</span>`;
         actionControls = `<button class="btn" data-action="extend" data-id="${r.id}">Extend Stay</button>`;
@@ -596,60 +612,8 @@ initPortal("user", (session) => {
   // and the same list we hand to simulate_fill().
   CarColors.fillSelect(carColorSelect);
 
-  // Contact Support is wired centrally by initSupportForm() in js/supabaseClient.js —
-  // it runs for every portal once the #support-* markup is present (see user.html below).
-
-  // ---------------- Review System ----------------
-
-const reviewGarage = document.getElementById("review-garage");
-const reviewRating = document.getElementById("review-rating");
-const reviewMessage = document.getElementById("review-message");
-const reviewSubmit = document.getElementById("review-submit");
-const reviewMsg = document.getElementById("review-msg");
-
-// Load garages into the dropdown
-(async () => {
-  const { data } = await sb
-    .from("garages")
-    .select("id,name")
-    .order("name");
-
-  if (data && reviewGarage) {
-    data.forEach(g => {
-      const option = document.createElement("option");
-      option.value = g.id;
-      option.textContent = g.name;
-      reviewGarage.appendChild(option);
-    });
-  }
-})();
-
-if (reviewSubmit) {
-  reviewSubmit.addEventListener("click", async () => {
-
-    reviewMsg.textContent = "";
-
-    const { error } = await sb
-      .from("garage_reviews")
-      .insert({
-        garage_id: Number(reviewGarage.value),
-        user_id: session.id,
-        rating: Number(reviewRating.value),
-        review: reviewMessage.value.trim()
-      });
-
-    if (error) {
-      reviewMsg.textContent = error.message;
-      return;
-    }
-
-    reviewMessage.value = "";
-    reviewRating.value = "5";
-
-    reviewMsg.textContent =
-      "Review submitted successfully.";
-  });
-}
+  // Reviews now live on rate.html (reached from "Rate your stay" on a Past Stay), and
+  // Contact Support lives on support.html (topbar link) — see loadUserReservations above.
 
   loadCars();
   loadGarages();

@@ -10,6 +10,7 @@
   <header class="topbar">
     <a class="brand" href="index.html">🅿️ Park Now</a>
     <div id="whoami" class="whoami hidden">
+      <a class="btn-link" href="support.html?role=tow">Contact Support</a>
       <span id="whoami-name"></span>
       <button id="logout" class="btn-link">Log out</button>
     </div>
@@ -55,23 +56,6 @@
           <tbody id="tow-rows"></tbody>
         </table>
         <p id="tow-empty" class="muted"></p>
-      </div>
-
-      <div class="card" style="margin-top: 2rem;">
-        <h2>📨 Contact Support</h2>
-        <p class="hint">Your ticket is sent from your logged-in account — our team will follow up.</p>
-
-        <label for="support-subject">Subject</label>
-        <input id="support-subject" type="text" placeholder="Brief summary" autocomplete="off" />
-
-        <label for="support-message" style="margin-top: 10px;">Message</label>
-        <textarea id="support-message" rows="4" placeholder="Describe your issue…"></textarea>
-
-        <button id="support-submit" class="btn" type="button" style="margin-top: 15px;">Submit ticket</button>
-        <p id="support-msg" class="msg"></p>
-
-        <h3 style="margin-top: 1.5rem;">Your tickets</h3>
-        <ul id="support-list" class="list"></ul>
       </div>
     </section>
   </main>
