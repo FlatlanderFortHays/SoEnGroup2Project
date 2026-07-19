@@ -90,6 +90,53 @@ const Auth = {
   },
 };
 
+// Contact Support form shared by every portal. A page opts in simply by including the
+// #support-* markup inside its logged-in view; initPortal calls this after onReady, so
+// there is no per-portal JS. The ticket is filed FROM the signed-in account, with the
+// sender's role + username denormalized onto the row so the dev console (dev.html) can
+// show who filed it without reading the locked-down accounts table.
+function initSupportForm(session) {
+  const submit = document.getElementById("support-submit");
+  if (!submit) return;                       // page has no support form — nothing to wire
+  const subject = document.getElementById("support-subject");
+  const message = document.getElementById("support-message");
+  const msg     = document.getElementById("support-msg");
+
+  submit.addEventListener("click", async () => {
+    msg.className = "msg";
+    msg.textContent = "";
+    const subjectVal = (subject.value || "").trim();
+    const messageVal = (message.value || "").trim();
+    if (!subjectVal || !messageVal) {
+      msg.className = "msg error";
+      msg.textContent = "Please fill in both a subject and a message.";
+      return;
+    }
+
+    submit.disabled = true;
+    try {
+      const { error } = await sb.from("support_tickets").insert({
+        user_id:  session.id,
+        role:     session.role,       // which portal filed it (denormalized for the dev view)
+        username: session.username,
+        subject:  subjectVal,
+        message:  messageVal,
+      });
+      if (error) {
+        msg.className = "msg error";
+        msg.textContent = error.message;
+        return;
+      }
+      subject.value = "";
+      message.value = "";
+      msg.className = "msg success";
+      msg.textContent = "✅ Support request submitted — our team will follow up.";
+    } finally {
+      submit.disabled = false;
+    }
+  });
+}
+
 // Wire up the login form / logout / who-am-i bar that every portal shares,
 // then hand control to the page via onReady(session).
 //
@@ -113,6 +160,7 @@ function initPortal(role, onReady) {
     whoami.classList.remove("hidden");
     whoamiName.textContent = `${session.username} (${session.role})`;
     onReady(session);
+    initSupportForm(session);   // no-op on pages without the #support-* markup
   }
 
   document.getElementById("logout").addEventListener("click", () => {
