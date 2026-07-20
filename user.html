@@ -5,6 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Park Now — User Portal</title>
   <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    /* My Vehicles list */
+    .vehicle-row { display: flex; align-items: center; gap: 12px; }
+    .vehicle-row .car-svg { flex: 0 0 auto; }
+    /* License-plate tile */
+    .plate {
+      flex: 0 0 auto;
+      font-family: ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+      font-weight: 700;
+      letter-spacing: 2px;
+      font-size: 1rem;
+      padding: 4px 10px;
+      background: #fff;
+      color: #111;
+      border: 2px solid #1f2937;
+      border-radius: 6px;
+      text-transform: uppercase;
+    }
+  </style>
 </head>
 <body>
   <header class="topbar">
@@ -37,24 +56,9 @@
     <!-- App -->
     <section id="app" class="hidden">
       <div class="card">
-        <h2>My cars</h2>
-        <form id="car-form" class="grid-2">
-          <input id="car-make"  placeholder="Make (e.g. Toyota)"  autocomplete="off" />
-          <input id="car-model" placeholder="Model (e.g. Corolla)" autocomplete="off" />
-          <!-- Options are injected by js/user.js from CarColors.PALETTE (js/carColors.js) —
-               the same list simulate_fill() paints its cars from. Do not hard-code them here. -->
-          <select id="car-color" title="Color"></select>
-          <input id="car-plate" placeholder="License plate"        autocomplete="off" />
-          <select id="car-size" title="Vehicle size">
-            <option value="compact">Compact</option>
-            <option value="normal" selected>Normal</option>
-            <option value="large">Large</option>
-          </select>
-          <label class="check"><input id="car-ev" type="checkbox" /> Electric (EV)</label>
-          <button class="btn" type="submit">Add car</button>
-        </form>
-        <p id="car-msg" class="msg error"></p>
+        <h2>My Vehicles</h2>
         <ul id="car-list" class="list"></ul>
+        <a class="btn" href="vehicle.html?role=user" style="margin-top: 12px;">➕ Add New Vehicle</a>
       </div>
 
       <div class="card">
