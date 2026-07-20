@@ -78,6 +78,31 @@
            `display:inline-block;vertical-align:-2px"></span>`;
   }
 
+  // A tiny side-view car icon, filled with the car's exact palette hex — the vector answer
+  // to "recolour the car" (works for the neutrals Silver/Gray/White/Black too, which a
+  // hue-shifted raster can't do). Three silhouettes: compact hatch / normal sedan / large
+  // SUV (taller cabin). Nothing here is user input (hex from PALETTE), so nothing to escape,
+  // same as swatchHtml. Used by the "My Vehicles" list (js/user.js) and vehicle.html preview.
+  function carSvg(color, size) {
+    const hex = hexOf(color) || NEUTRAL_HEX;
+    const s = String(size || "normal").toLowerCase();
+    const P = {   // per-size proportions on a 60x28 canvas (body sits at y 14–23)
+      compact: { bx: 9, bw: 42, cx: 16, cw: 22, cy: 9, wl: 19, wr: 41 },
+      normal:  { bx: 5, bw: 50, cx: 15, cw: 26, cy: 8, wl: 18, wr: 46 },
+      large:   { bx: 4, bw: 52, cx: 13, cw: 32, cy: 5, wl: 18, wr: 46 },
+    };
+    const p = P[s] || P.normal;
+    const wheel = (cx) =>
+      `<circle cx="${cx}" cy="23" r="4.5" fill="#1f2937"/>` +
+      `<circle cx="${cx}" cy="23" r="1.8" fill="#cbd5e1"/>`;
+    return `<svg class="car-svg" viewBox="0 0 60 28" width="46" height="22" role="img" aria-label="car">` +
+      `<rect x="${p.cx}" y="${p.cy}" width="${p.cw}" height="${16 - p.cy}" rx="4" fill="${hex}"/>` +
+      `<rect x="${p.cx + 3}" y="${p.cy + 2}" width="${p.cw - 6}" height="${12 - p.cy}" rx="2" fill="rgba(255,255,255,0.6)"/>` +
+      `<rect x="${p.bx}" y="14" width="${p.bw}" height="9" rx="4.5" fill="${hex}"/>` +
+      wheel(p.wl) + wheel(p.wr) +
+      `</svg>`;
+  }
+
   // The ONE place the app calls simulate_fill(), so js/user.js and js/simulation.js cannot
   // pass the palette differently (or one of them forget to pass it at all).
   // The retry covers the window where someone pulled the new JS but has NOT re-run
@@ -149,6 +174,7 @@
     canonical,
     fillSelect,
     swatchHtml,
+    carSvg,
     simulateFill,
     verifyAgainstDb,
   };
