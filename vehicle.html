@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Park Now — Vehicle</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .plate {
+      display: inline-block;
+      font-family: ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+      font-weight: 700; letter-spacing: 2px; font-size: 1rem;
+      padding: 4px 10px; background: #fff; color: #111;
+      border: 2px solid #1f2937; border-radius: 6px; text-transform: uppercase;
+    }
+    .veh-preview { display: flex; align-items: center; gap: 12px; margin: 4px 0 14px; min-height: 28px; }
+    /* Stack the form: label above, full-width control below (mobile + desktop). */
+    .card > label:not(.check) { display: block; margin-top: 10px; }
+    #veh-make, #veh-model, #veh-plate, #veh-color, #veh-size {
+      display: block; width: 100%; box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">🅿️ Park Now</a>
+    <div id="whoami" class="whoami">
+      <a class="btn-link" id="back-link" href="user.html">← Back to portal</a>
+      <span id="whoami-name"></span>
+      <button id="logout" class="btn-link">Log out</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <h2 id="veh-title">Add Vehicle</h2>
+
+      <div class="veh-preview">
+        <span id="veh-preview-car"></span>
+        <span id="veh-preview-plate" class="plate">PLATE</span>
+      </div>
+
+      <label for="veh-make">Make</label>
+      <input id="veh-make" type="text" placeholder="e.g. Toyota" autocomplete="off" />
+
+      <label for="veh-model">Model</label>
+      <input id="veh-model" type="text" placeholder="e.g. Corolla" autocomplete="off" />
+
+      <label for="veh-color">Color</label>
+      <select id="veh-color"></select>
+
+      <label for="veh-plate">License plate</label>
+      <input id="veh-plate" type="text" placeholder="e.g. 1234567" autocomplete="off" />
+
+      <label for="veh-size">Size</label>
+      <select id="veh-size">
+        <option value="compact">Compact</option>
+        <option value="normal" selected>Normal</option>
+        <option value="large">SUV</option>
+      </select>
+
+      <label class="check" style="margin-top: 12px;"><input id="veh-ev" type="checkbox" /> Electric (EV)</label>
+
+      <div style="margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <button id="veh-submit" class="btn" type="button">Add vehicle</button>
+        <button id="veh-remove" class="btn hidden" type="button" style="background:#cc0000; color:#fff; border:none;">Remove vehicle</button>
+      </div>
+      <p id="veh-msg" class="msg"></p>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/carColors.js"></script>
+  <script src="js/vehicle.js"></script>
+</body>
+</html>
