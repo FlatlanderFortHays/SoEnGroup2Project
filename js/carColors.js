@@ -86,24 +86,29 @@
   function carSvg(color, size) {
     const hex = hexOf(color) || NEUTRAL_HEX;
     const s = String(size || "normal").toLowerCase();
-    // Body at y14–23, wheels at y23; the cabin sits on top up to y16 (the body overlaps it).
-    // compact/normal = a rounded sedan greenhouse (short roof, hood + trunk showing), body
-    // width growing compact < normal. large = a WIDE body + a TALL, BOXY cabin with a long
-    // low-radius roofline — a suburban SUV, clearly not a sedan.
-    const P = {
-      compact: { bw: 36, cx: 21, cw: 18, cy: 8, rx: 4 },   // Mini: narrow small sedan
-      normal:  { bw: 48, cx: 18, cw: 24, cy: 8, rx: 4 },   // medium sedan
-      large:   { bw: 58, cx: 10, cw: 44, cy: 3, rx: 1.5 }, // wide boxy SUV
-    };
-    const p = P[s] || P.normal;
+    // SUV (large): a TALL two-box silhouette — short hood, steep windshield, long FLAT roof,
+    // near-vertical tailgate, big wheels. The high flat roofline running most of the length is
+    // what makes it read as an SUV instead of the short rounded greenhouse on the sedans below.
+    if (s === "large") {
+      const wheel = (wx) =>
+        `<circle cx="${wx}" cy="21" r="5.5" fill="#1f2937"/>` +
+        `<circle cx="${wx}" cy="21" r="2.2" fill="#cbd5e1"/>`;
+      return `<svg class="car-svg" viewBox="0 0 60 28" width="46" height="22" role="img" aria-label="SUV">` +
+        `<path d="M4 21 L4 13 L11 13 L15 4 L51 4 L55 13 L56 13 L56 21 Z" fill="${hex}"/>` +
+        `<rect x="17" y="5" width="32" height="7" rx="1" fill="rgba(255,255,255,0.6)"/>` +
+        wheel(15) + wheel(47) +
+        `</svg>`;
+    }
+
+    // Sedans (Mini / Normal): a short rounded greenhouse over a lower body; Mini narrower.
+    const p = s === "compact" ? { bw: 38, cx: 20, cw: 20 } : { bw: 48, cx: 18, cw: 24 };
     const bx = (60 - p.bw) / 2;
-    const cabH = 16 - p.cy;
     const wheel = (wx) =>
       `<circle cx="${wx}" cy="23" r="4.5" fill="#1f2937"/>` +
       `<circle cx="${wx}" cy="23" r="1.8" fill="#cbd5e1"/>`;
     return `<svg class="car-svg" viewBox="0 0 60 28" width="46" height="22" role="img" aria-label="car">` +
-      `<rect x="${p.cx}" y="${p.cy}" width="${p.cw}" height="${cabH + 3}" rx="${p.rx}" fill="${hex}"/>` +
-      `<rect x="${p.cx + 3}" y="${p.cy + 2}" width="${p.cw - 6}" height="${cabH - 2}" rx="${Math.max(1, p.rx - 1)}" fill="rgba(255,255,255,0.6)"/>` +
+      `<rect x="${p.cx}" y="8" width="${p.cw}" height="11" rx="6" fill="${hex}"/>` +
+      `<rect x="${p.cx + 3}" y="10" width="${p.cw - 6}" height="6" rx="3" fill="rgba(255,255,255,0.6)"/>` +
       `<rect x="${bx}" y="14" width="${p.bw}" height="9" rx="4.5" fill="${hex}"/>` +
       wheel(bx + 7) + wheel(bx + p.bw - 7) +
       `</svg>`;
