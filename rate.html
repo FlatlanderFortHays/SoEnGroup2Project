@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Park Now — Rate your stay</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .stars { display: inline-flex; gap: 6px; font-size: 2.2rem; line-height: 1; cursor: pointer; user-select: none; }
+    .stars .star { color: #cbd5e1; }
+    .stars .star.on { color: #f6c915; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">🅿️ Park Now</a>
+    <div id="whoami" class="whoami">
+      <a class="btn-link" id="back-link" href="user.html">← Back to portal</a>
+      <span id="whoami-name"></span>
+      <button id="logout" class="btn-link">Log out</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <h2>⭐ Rate your stay</h2>
+      <p id="rate-context" class="hint">Loading…</p>
+
+      <label style="display:block; margin-top: 10px;">Your rating</label>
+      <div id="stars" class="stars" role="radiogroup" aria-label="Star rating">
+        <span class="star" data-value="1" title="1 star">☆</span>
+        <span class="star" data-value="2" title="2 stars">☆</span>
+        <span class="star" data-value="3" title="3 stars">☆</span>
+        <span class="star" data-value="4" title="4 stars">☆</span>
+        <span class="star" data-value="5" title="5 stars">☆</span>
+      </div>
+      <p id="stars-label" class="muted">Hover the stars, then click to choose (1–5).</p>
+
+      <label for="rate-message" style="margin-top: 10px;">Review (optional)</label>
+      <textarea id="rate-message" rows="4" placeholder="How was it?"></textarea>
+
+      <button id="rate-submit" class="btn" type="button" style="margin-top: 15px;">Submit rating</button>
+      <p id="rate-msg" class="msg"></p>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/rate.js"></script>
+</body>
+</html>

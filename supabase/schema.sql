@@ -1318,6 +1318,25 @@ drop policy if exists "mvp all access" on garage_reviews;
 create policy "mvp all access" on support_tickets for all using (true) with check (true);
 create policy "mvp all access" on garage_reviews  for all using (true) with check (true);
 
+-- Tie each review to the specific stay being rated (rate.html): a Past Stay can be rated
+-- once and re-opened to edit. Nullable + full UNIQUE — legacy per-garage rows keep NULL
+-- (Postgres treats NULLs as distinct), new per-stay rows are one-per-reservation, and the
+-- browser can upsert(onConflict:'reservation_id'). Idempotent.
+alter table garage_reviews add column if not exists reservation_id bigint references reservations(id) on delete cascade;
+alter table garage_reviews drop constraint if exists garage_reviews_reservation_uq;
+alter table garage_reviews add  constraint garage_reviews_reservation_uq unique (reservation_id);
+
+-- Per-garage average rating for the booking list (js/user.js). Defined here, after
+-- garage_reviews exists, and granted select like the other views.
+drop view if exists garage_ratings;
+create or replace view garage_ratings as
+  select garage_id,
+         round(avg(rating)::numeric, 1) as avg_rating,
+         count(*)                       as review_count
+  from garage_reviews
+  group by garage_id;
+grant select on garage_ratings to anon, authenticated;
+
 -- ---------------------------------------------------------------------
 -- dev_stats(): site-wide aggregates for the hidden dev console (dev.html).
 --   SECURITY DEFINER because `accounts` is revoked from anon (see the lockdown
