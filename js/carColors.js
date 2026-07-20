@@ -86,20 +86,26 @@
   function carSvg(color, size) {
     const hex = hexOf(color) || NEUTRAL_HEX;
     const s = String(size || "normal").toLowerCase();
-    const P = {   // per-size proportions on a 60x28 canvas (body sits at y 14–23)
-      compact: { bx: 9, bw: 42, cx: 16, cw: 22, cy: 9, wl: 19, wr: 41 },
-      normal:  { bx: 5, bw: 50, cx: 15, cw: 26, cy: 8, wl: 18, wr: 46 },
-      large:   { bx: 4, bw: 52, cx: 13, cw: 32, cy: 5, wl: 18, wr: 46 },
+    // Body at y14–23, wheels at y23; the cabin sits on top up to y16 (the body overlaps it).
+    // compact/normal = a rounded sedan greenhouse (short roof, hood + trunk showing), body
+    // width growing compact < normal. large = a WIDE body + a TALL, BOXY cabin with a long
+    // low-radius roofline — a suburban SUV, clearly not a sedan.
+    const P = {
+      compact: { bw: 36, cx: 21, cw: 18, cy: 8, rx: 4 },   // Mini: narrow small sedan
+      normal:  { bw: 48, cx: 18, cw: 24, cy: 8, rx: 4 },   // medium sedan
+      large:   { bw: 58, cx: 10, cw: 44, cy: 3, rx: 1.5 }, // wide boxy SUV
     };
     const p = P[s] || P.normal;
-    const wheel = (cx) =>
-      `<circle cx="${cx}" cy="23" r="4.5" fill="#1f2937"/>` +
-      `<circle cx="${cx}" cy="23" r="1.8" fill="#cbd5e1"/>`;
+    const bx = (60 - p.bw) / 2;
+    const cabH = 16 - p.cy;
+    const wheel = (wx) =>
+      `<circle cx="${wx}" cy="23" r="4.5" fill="#1f2937"/>` +
+      `<circle cx="${wx}" cy="23" r="1.8" fill="#cbd5e1"/>`;
     return `<svg class="car-svg" viewBox="0 0 60 28" width="46" height="22" role="img" aria-label="car">` +
-      `<rect x="${p.cx}" y="${p.cy}" width="${p.cw}" height="${16 - p.cy}" rx="4" fill="${hex}"/>` +
-      `<rect x="${p.cx + 3}" y="${p.cy + 2}" width="${p.cw - 6}" height="${12 - p.cy}" rx="2" fill="rgba(255,255,255,0.6)"/>` +
-      `<rect x="${p.bx}" y="14" width="${p.bw}" height="9" rx="4.5" fill="${hex}"/>` +
-      wheel(p.wl) + wheel(p.wr) +
+      `<rect x="${p.cx}" y="${p.cy}" width="${p.cw}" height="${cabH + 3}" rx="${p.rx}" fill="${hex}"/>` +
+      `<rect x="${p.cx + 3}" y="${p.cy + 2}" width="${p.cw - 6}" height="${cabH - 2}" rx="${Math.max(1, p.rx - 1)}" fill="rgba(255,255,255,0.6)"/>` +
+      `<rect x="${bx}" y="14" width="${p.bw}" height="9" rx="4.5" fill="${hex}"/>` +
+      wheel(bx + 7) + wheel(bx + p.bw - 7) +
       `</svg>`;
   }
 
